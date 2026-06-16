@@ -28,11 +28,12 @@ def scrape_jubeat_history():
       print("cookies.txt が見つかりません。スクリプトと同じフォルダに配置してください。")
       exit()
 
-    # 4. CookieProcessor と Opener を構築
-    cookie_processor = urllib.request.HTTPCookieProcessor(cj)
-    opener = urllib.request.build_opener(cookie_processor)
   else:
-    opener = urllib.request.build_opener()
+    cj = browser_cookie3.firefox()
+
+  # 4. CookieProcessor と Opener を構築
+  cookie_processor = urllib.request.HTTPCookieProcessor(cj)
+  opener = urllib.request.build_opener(cookie_processor)
 
   # ユーザーエージェントを設定（ロボット判定による弾きを防ぐため）
   opener.addheaders = [('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')]
