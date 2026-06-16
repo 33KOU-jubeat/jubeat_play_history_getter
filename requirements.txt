@@ -1,1 +1,4 @@
 flask
+browser_cookie3
+pandas
+bs4
