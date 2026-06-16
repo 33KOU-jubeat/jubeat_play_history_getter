@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <table>
+      <thead>
+        <tr>
+          <th>プレー日時</th>
+          <th>楽曲名</th>
+          <th>難易度</th>
+          <th>スコア</th>
+          <th>ハードモード</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Pythonから渡されたhistory_data_tableを展開 -->
+        {% for history_data in history_data_table %}
+          <tr>
+            <td>{{ history_data.date }}</td>
+            <td>{{ history_data.music_title }}</td>
+            <td>{{ history_data.difficulty }}</td>
+            <td>{{ history_data.score }}</td>
+            <td>{{ history_data.hardmode }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <!-- CSVダウンロードボタン -->
+    <a href="/download" class="btn btn-download">CSVファイルをダウンロード</a>
+    <p>次にやること:Render登録、Githubリポジトリ作成</p>
+    <p>そのうちやること:一緒にプレーした人の情報取得、Cookieを自動で取得する方法、cookies.txtの配置や指定方法調査</p>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+      <table>
+        <thead>
+          <tr>
+            <th>楽曲名</th>
+            <th>難易度</th>
+            <th>スコア</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Pythonから渡されたusersを展開 -->
+          {% for user in users %}
+            <tr>
+              <td>{{ history_data_table.music_title }}</td>
+              <td>{{ history_data_table.difficulty }}</td>
+              <td>{{ history_data_table.score }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+    </table>
+      <p>次にやること:一緒にプレーした人、スコアの取得、管理方法検討</p>
+      <p>そのうちやること:Cookieを自動で取得する方法、cookies.txtの配置や指定方法調査、Render登録、Githubリポジトリ作成</p>
+  </body>
+</html>
