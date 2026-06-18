@@ -3,3 +3,5 @@ browser_cookie3
 pandas
 bs4
 gunicorn
+flask_cors
+pyOpenSSL

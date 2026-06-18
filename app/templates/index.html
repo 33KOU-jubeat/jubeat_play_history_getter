@@ -7,32 +7,36 @@
     <title>Document</title>
   </head>
   <body>
-    <table>
-      <thead>
-        <tr>
-          <th>プレー日時</th>
-          <th>楽曲名</th>
-          <th>難易度</th>
-          <th>スコア</th>
-          <th>ハードモード</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Pythonから渡されたhistory_data_tableを展開 -->
-        {% for history_data in history_data_table %}
+    {% if history_data_table %}
+      <table>
+        <thead>
           <tr>
-            <td>{{ history_data.date }}</td>
-            <td>{{ history_data.music_title }}</td>
-            <td>{{ history_data.difficulty }}</td>
-            <td>{{ history_data.score }}</td>
-            <td>{{ history_data.hardmode }}</td>
+            <th>プレー日時</th>
+            <th>楽曲名</th>
+            <th>難易度</th>
+            <th>スコア</th>
+            <th>ハードモード</th>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <!-- Pythonから渡されたhistory_data_tableを展開 -->
+          {% for history_data in history_data_table %}
+            <tr>
+              <td>{{ history_data.date }}</td>
+              <td>{{ history_data.music_title }}</td>
+              <td>{{ history_data.difficulty }}</td>
+              <td>{{ history_data.score }}</td>
+              <td>{{ history_data.hardmode }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p style="color: #666;">※まだデータが送信されていません。上記のステップを行ってください。</p>
+    {% endif %}
     <!-- CSVダウンロードボタン -->
     <a href="/download" class="btn btn-download">CSVファイルをダウンロード</a>
     <p>次にやること:DB周り追加</p>
-    <p>そのうちやること:一緒にプレーした人の情報取得、Cookieをブラウザによらず自動で取得する方法調査</p>
+    <p>そのうちやること:一緒にプレーした人の情報取得</p>
   </body>
 </html>

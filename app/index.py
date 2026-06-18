@@ -9,40 +9,21 @@ import http.cookiejar
 import pandas as pd
 
 from bs4 import BeautifulSoup
-from flask import Flask, render_template, send_file
+from flask import Flask, render_template, request, send_file, session, jsonify
+from flask_cors import CORS
 from app import static
 
 app = Flask(__name__)
 app.register_blueprint(static.app)
 
-def scrape_jubeat_history():
-  # 対象のサイトURL
-  url = "https://p.eagate.573.jp/game/jubeat/beyond/playdata/history.html"
+DATA_STORE = {}
 
-  if os.path.isfile("C:/Users/mi3ko/Desktop/TestProject/app/cookies.txt"):
-    # 1. 保存した cookies.txt を読み込む
-    cj = http.cookiejar.MozillaCookieJar("C:/Users/mi3ko/Desktop/TestProject/app/cookies.txt")
-    try:
-      cj.load(ignore_discard=True, ignore_expires=True)
-    except SystemError:
-      print("cookies.txt が見つかりません。スクリプトと同じフォルダに配置してください。")
-      exit()
+# ★重要★ すべてのドメイン（e-amusement側）からのデータ受信を許可する設定
+CORS(app)
 
-  else:
-    cj = browser_cookie3.firefox()
-
-  # 4. CookieProcessor と Opener を構築
-  cookie_processor = urllib.request.HTTPCookieProcessor(cj)
-  opener = urllib.request.build_opener(cookie_processor)
-
-  # ユーザーエージェントを設定（ロボット判定による弾きを防ぐため）
-  opener.addheaders = [('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')]
-
-  # URLリソースを開く
-  res = opener.open(url).read()
-
+def parse_html_list(html_list):
   # インスタンスの作成
-  soup = BeautifulSoup(res, 'html.parser')
+  soup = BeautifulSoup(html_list[0], "html.parser")
 
   # プレイ履歴の曲名を取得
   info_date = soup.find_all("div", class_="info_date")
@@ -155,12 +136,40 @@ def scrape_jubeat_history():
 
 @app.route('/')
 def index():
-  history_data_table = scrape_jubeat_history()
-  return render_template('index.html', history_data_table = history_data_table)
+  user_id = request.remote_addr
+  history_data_table = DATA_STORE.get(user_id, None)
+  if history_data_table:
+    return render_template('index.html', history_data_table = history_data_table)
+  else :
+    return render_template('index.html', history_data_table = None)
+
+# 2. JavaScriptからHTMLデータを受け取るAPI（POSTエンドポイント）
+@app.route('/receive_html', methods=['POST'])
+def receive_html():
+    try:
+        # JSON形式のデータを受け取る
+        req_data = request.get_json()
+        if not req_data or 'html_list' not in req_data:
+            return jsonify({"status": "error", "message": "データが空です"}), 400
+            
+        html_list = req_data['html_list']
+        history_data = parse_html_list(html_list)
+        
+        if not history_data:
+            return jsonify({"status": "error", "message": "データの解析に失敗しました"}), 400
+
+        user_id = request.remote_addr
+        DATA_STORE[user_id] = history_data
+        
+        return jsonify({"status": "success", "message": "データを正常に処理しました"})
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 @app.route('/download')
 def download():
-  history_data_table = scrape_jubeat_history()
+  history_data_table = DATA_STORE.get(user_id, None)
     
   # PandasでDataFrameに変換し、メモリ上でCSVを作成（utf-8-sigでExcel対策）
   df = pd.DataFrame(history_data_table)
