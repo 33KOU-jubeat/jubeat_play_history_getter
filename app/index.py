@@ -237,3 +237,39 @@ def download():
     as_attachment=True,
     download_name='jubeat_history.csv'
   )
+
+# データベース内の全データをCSV形式でダウンロードするルート
+@app.route('/download_all')
+def download_all():
+    # 1. データベースからすべてのレコードを取得する
+    all_records = JubeatHistory.query.all()
+    
+    if not all_records:
+        return "データベースにデータが1件も登録されていません。", 400
+    
+    # 2. PandasのDataFrameに変換するために、全データを辞書型リストに整形
+    # ※全件データであることが分かるよう、識別用の「ユーザーID(IP)」も列に含めています
+    all_data = []
+    for r in all_records:
+        all_data.append({
+            "ユーザーID": r.user_id,
+            "プレー日時": r.date,
+            "曲名": r.music_name,
+            "難易度": r.difficulty,
+            "スコア": r.score,
+            "ハードモード": r.is_hardmode
+        })
+        
+    # 3. DataFrameに変換し、メモリ上でCSVを作成（Excel文字化け対策のBOM付きUTF-8）
+    df = pd.DataFrame(all_data)
+    csv_buffer = io.BytesIO()
+    df.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
+    csv_buffer.seek(0)
+    
+    # 4. ファイル名を分けてブラウザに送信
+    return send_file(
+        csv_buffer,
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name='jubeat_all_history_database.csv'
+    )
