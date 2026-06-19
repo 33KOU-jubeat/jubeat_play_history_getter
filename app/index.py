@@ -10,6 +10,7 @@ import pandas as pd
 
 from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, send_file, session, jsonify
+from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from app import static
 
@@ -20,6 +21,31 @@ DATA_STORE = {}
 
 # ★重要★ すべてのドメイン（e-amusement側）からのデータ受信を許可する設定
 CORS(app)
+
+# --- データベース設定 ---
+# Renderの環境変数（DATABASE_URL）があればそれを使い、なければローカル用にSQLiteを使う
+# ※RenderのURLが「postgres://」で始まる場合、SQLAlchemy用に「postgresql://」に置換する対策を入れています
+db_url = os.environ.get('DATABASE_URL', 'sqlite:///jubeat_local.db')
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# --- データベースのテーブル（モデル）定義 ---
+class JubeatHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(50), nullable=False) # 簡易的な識別用（IPなど）
+    date = db.Column(db.String(255), nullable=False) # プレー日時
+    music_name = db.Column(db.String(255), nullable=False) # 曲名
+    difficulty = db.Column(db.String(50)) # 難易度
+    score = db.Column(db.Integer) # スコア
+    is_hardmode = db.Column(db.Integer) # ハードモード有無
+
+# アプリ起動時にテーブルが存在しない場合は自動作成する
+with app.app_context():
+    db.create_all()
 
 def parse_html_list(html_list):
   # インスタンスの作成
@@ -159,11 +185,38 @@ def receive_html():
             return jsonify({"status": "error", "message": "データの解析に失敗しました"}), 400
 
         user_id = request.remote_addr
+
+        # 【重複対策】同じ日時・曲名・難易度のデータが既にDBにあれば、二重登録を防ぐために削除（または上書き）する処理
+        for item in history_data:
+            existing = JubeatHistory.query.filter_by(
+                user_id=user_id, 
+                date=item["date"], 
+                music_name=item["music_title"], 
+                difficulty=item["difficulty"]
+            ).first()
+            if existing:
+                db.session.delete(existing)
+            
+            # 新しいレコードを追加
+            new_record = JubeatHistory(
+                user_id=user_id,
+                date=item["date"], 
+                music_name=item["music_title"],
+                difficulty=item["difficulty"],
+                score=item["score"],
+                is_hardmode=item["hardmode"]
+            )
+            db.session.add(new_record)
+            
+        # まとめてDBに保存確定（コミット）
+        db.session.commit()
+
         DATA_STORE[user_id] = history_data
         
         return jsonify({"status": "success", "message": "データを正常に処理しました"})
         
     except Exception as e:
+        db.session.rollback() # エラー時は処理を取り消す
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
