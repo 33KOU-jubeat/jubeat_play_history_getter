@@ -170,11 +170,11 @@ def parse_html_list(html_list):
     for item in comma_split_items:
       # デフォルト値設定
       rival1_name_text = ""
-      rival1_score_text = ""
+      rival1_score_text = 0
       rival2_name_text = ""
-      rival2_score_text = ""
+      rival2_score_text = 0
       rival3_name_text = ""
-      rival3_score_text = ""
+      rival3_score_text = 0
 
       # マッチング人数をカウント
       matching_num = item.count("<ul>")
