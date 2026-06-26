@@ -4,9 +4,20 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>jubeatプレー履歴保管ツール</title>
   </head>
   <body>
+    <h1>jubeat プレー履歴 CSVツール (JS連携版)</h1>
+    <h2>使い方</h2>
+    <ol>
+      <li>jubeatの「プレー履歴」ページを開いてログインします。</li>
+      <li>以下のbookmarkletをプレー履歴ページで実行してください。</li>
+      <textarea rows="1" id="bml_n" onclick="this.select()" readonly="">javascript:(async()=>{const%20e=document.querySelectorAll('#play_history');if(0===e.length)return%20void%20alert("履歴データ（#play_history）が見つかりません。jubeatの履歴ページを開いているか確認してください。");const%20t=Array.from(e).map((e=>e.outerHTML)),r="https://jubeat-play-history-getter.onrender.com/receive_html";const%20k=document.querySelector(".cl_pc_dsp").textContent.trim();try{const%20e=await%20fetch(r,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({html_list:t,konami_id:k})});e.ok?(alert("データの送信に成功しました！ツール画面を確認してください。"),window.open("https://jubeat-play-history-getter.onrender.com/","_blank")):alert("サーバーエラーが発生しました。ステータス:%20"+e.status)}catch(e){alert("送信に失敗しました。CORSエラーまたはサーバーが起動していない可能性があります:%20"+e)}})();</textarea>
+      <li>送信成功のアラートが出たら、このページを再読み込み（リフレッシュ）してください。</li>
+    </ol>
+    {% if konami_id %}
+      <p>{{ konami_id }}さんの以下のプレー履歴を登録します。</p>
+    {% endif %}
     {% if history_data_table %}
       <table>
         <thead>
@@ -16,6 +27,12 @@
             <th>難易度</th>
             <th>スコア</th>
             <th>ハードモード</th>
+            <th>他プレーヤー1</th>
+            <th>他プレーヤー1のスコア</th>
+            <th>他プレーヤー2</th>
+            <th>他プレーヤー2のスコア</th>
+            <th>他プレーヤー3</th>
+            <th>他プレーヤー3のスコア</th>
           </tr>
         </thead>
         <tbody>
@@ -27,6 +44,12 @@
               <td>{{ history_data.difficulty }}</td>
               <td>{{ history_data.score }}</td>
               <td>{{ history_data.hardmode }}</td>
+              <td>{{ history_data.rival1_name }}</td>
+              <td>{{ history_data.rival1_score }}</td>
+              <td>{{ history_data.rival2_name }}</td>
+              <td>{{ history_data.rival2_score }}</td>
+              <td>{{ history_data.rival3_name }}</td>
+              <td>{{ history_data.rival3_score }}</td>
             </tr>
           {% endfor %}
         </tbody>
@@ -37,7 +60,7 @@
     <!-- CSVダウンロードボタン -->
     <a href="/download" class="btn btn-download">上記データのCSVファイルをダウンロード</a></br>
     <a href="/download_all" class="btn btn-download">DB全データをダウンロード</a>
-    <p>次にやること:DB周り追加</p>
-    <p>そのうちやること:一緒にプレーした人の情報取得、広告追加</p>
+    <p>次にやること:ユーザーID周り追加</p>
+    <p>そのうちやること:同一ユーザー、楽曲、難易度、ハードモード有無の履歴を1つにまとめる、広告追加</p>
   </body>
 </html>

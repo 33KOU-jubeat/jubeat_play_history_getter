@@ -18,6 +18,7 @@ app = Flask(__name__)
 app.register_blueprint(static.app)
 
 DATA_STORE = {}
+ID_STORE = {}
 
 # ★重要★ すべてのドメイン（e-amusement側）からのデータ受信を許可する設定
 CORS(app)
@@ -37,11 +38,18 @@ db = SQLAlchemy(app)
 class JubeatHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(50), nullable=False) # 簡易的な識別用（IPなど）
+    konami_id = db.Column(db.String(50), nullable=False) # コナミID
     date = db.Column(db.String(255), nullable=False) # プレー日時
     music_name = db.Column(db.String(255), nullable=False) # 曲名
     difficulty = db.Column(db.String(50)) # 難易度
     score = db.Column(db.Integer) # スコア
     is_hardmode = db.Column(db.Integer) # ハードモード有無
+    rival1_name = db.Column(db.String(50)) # 他プレイヤー1の名前
+    rival1_score = db.Column(db.Integer) # 他プレイヤー1のスコア
+    rival2_name = db.Column(db.String(50)) # 他プレイヤー2の名前
+    rival2_score = db.Column(db.Integer) # 他プレイヤー2のスコア
+    rival3_name = db.Column(db.String(50)) # 他プレイヤー3の名前
+    rival3_score = db.Column(db.Integer) # 他プレイヤー3のスコア
 
 # アプリ起動時にテーブルが存在しない場合は自動作成する
 with app.app_context():
@@ -53,7 +61,6 @@ def parse_html_list(html_list):
 
   # プレイ履歴の曲名を取得
   info_date = soup.find_all("div", class_="info_date")
-
 
   date_list = []
   for tag in info_date:
@@ -76,6 +83,7 @@ def parse_html_list(html_list):
         if clean_text:
           if clean_text != "プレー日時:":
             date_list.append(clean_text)
+
 
   # プレイ履歴の曲名を取得
   info_title = soup.find_all("div", class_="info_title")
@@ -146,6 +154,83 @@ def parse_html_list(html_list):
 
   # プレイ履歴のマッチング相手・難易度・スコアを取得
   player_match = soup.find_all("div", class_="player_match")
+  rival1_name_list = []
+  rival1_score_list = []
+  rival2_name_list = []
+  rival2_score_list = []
+  rival3_name_list = []
+  rival3_score_list = []
+  for tag in player_match:
+
+    # 1. タグ全体の文字列（または中のテキスト）を取得し、カンマで分割
+    # ※ HTML構造を保ったまま「>」と「<」を判定するため str(tag) を使用します
+    raw_text = str(tag)
+    comma_split_items = raw_text.split(",")
+      
+    for item in comma_split_items:
+      # デフォルト値設定
+      rival1_name_text = ""
+      rival1_score_text = ""
+      rival2_name_text = ""
+      rival2_score_text = ""
+      rival3_name_text = ""
+      rival3_score_text = ""
+
+      # マッチング人数をカウント
+      matching_num = item.count("<ul>")
+
+      if matching_num != 0:
+        # 2. 正則表現を使って「>」と「<」に挟まれた部分をすべて抽出
+        # [^><]+ は「>」でも「<」でもない文字が1文字以上続く部分にマッチします
+        matches = re.findall(r'>([^><]+)<', item)
+
+        rival_list = []
+        for match in matches:
+          clean_text = match.strip()
+          if clean_text:
+            rival_list.append(match)
+
+        if len(rival_list) >= 6:
+          rival1_name_text = rival_list[0].strip()
+          clean_text_all = rival_list[1].strip()
+          target = ' '
+          idx = clean_text_all.find(target)
+          rival1_score_text = clean_text_all[:idx]
+          rival2_name_text = rival_list[2].strip()
+          clean_text_all = rival_list[3].strip()
+          target = ' '
+          idx = clean_text_all.find(target)
+          rival2_score_text = clean_text_all[:idx]
+          rival3_name_text = rival_list[4].strip()
+          clean_text_all = rival_list[5].strip()
+          target = ' '
+          idx = clean_text_all.find(target)
+          rival3_score_text = clean_text_all[:idx]
+        elif len(rival_list) >= 4:
+          rival1_name_text = rival_list[0].strip()
+          clean_text_all = rival_list[1].strip()
+          target = ' '
+          idx = clean_text_all.find(target)
+          rival1_score_text = clean_text_all[:idx]
+          rival2_name_text = rival_list[2].strip()
+          clean_text_all = rival_list[3].strip()
+          target = ' '
+          idx = clean_text_all.find(target)
+          rival2_score_text = clean_text_all[:idx]
+        elif len(rival_list) >= 2:
+          rival1_name_text = rival_list[0].strip()
+          clean_text_all = rival_list[1].strip()
+          target = ' '
+          idx = clean_text_all.find(target)
+          rival1_score_text = clean_text_all[:idx]
+
+      rival1_name_list.append(rival1_name_text)
+      rival1_score_list.append(rival1_score_text)
+      rival2_name_list.append(rival2_name_text)
+      rival2_score_list.append(rival2_score_text)
+      rival3_name_list.append(rival3_name_text)
+      rival3_score_list.append(rival3_score_text)
+
 
   history_data_list = []
   for i in range(len(title_list)):
@@ -154,7 +239,13 @@ def parse_html_list(html_list):
       "music_title": title_list[i],
       "difficulty": difficulty_list[i],
       "score": score_list[i],
-      "hardmode": hardmode_list[i]
+      "hardmode": hardmode_list[i],
+      "rival1_name": rival1_name_list[i],
+      "rival1_score": rival1_score_list[i],
+      "rival2_name": rival2_name_list[i],
+      "rival2_score": rival2_score_list[i],
+      "rival3_name": rival3_name_list[i],
+      "rival3_score": rival3_score_list[i]
     }
     history_data_list.append(play_data)
 
@@ -164,10 +255,11 @@ def parse_html_list(html_list):
 def index():
   user_id = request.remote_addr
   history_data_table = DATA_STORE.get(user_id, None)
+  konami_id = ID_STORE.get(user_id, None)
   if history_data_table:
-    return render_template('index.html', history_data_table = history_data_table)
+    return render_template('index.html', history_data_table = history_data_table, konami_id = konami_id)
   else :
-    return render_template('index.html', history_data_table = None)
+    return render_template('index.html', history_data_table = None, konami_id = None)
 
 # 2. JavaScriptからHTMLデータを受け取るAPI（POSTエンドポイント）
 @app.route('/receive_html', methods=['POST'])
@@ -178,6 +270,7 @@ def receive_html():
         if not req_data or 'html_list' not in req_data:
             return jsonify({"status": "error", "message": "データが空です"}), 400
             
+        konami_id = req_data['konami_id']
         html_list = req_data['html_list']
         history_data = parse_html_list(html_list)
         
@@ -189,7 +282,7 @@ def receive_html():
         # 【重複対策】同じ日時・曲名・難易度のデータが既にDBにあれば、二重登録を防ぐために削除（または上書き）する処理
         for item in history_data:
             existing = JubeatHistory.query.filter_by(
-                user_id=user_id, 
+                konami_id=konami_id, 
                 date=item["date"], 
                 music_name=item["music_title"], 
                 difficulty=item["difficulty"]
@@ -200,11 +293,18 @@ def receive_html():
             # 新しいレコードを追加
             new_record = JubeatHistory(
                 user_id=user_id,
+                konami_id=konami_id,
                 date=item["date"], 
                 music_name=item["music_title"],
                 difficulty=item["difficulty"],
                 score=item["score"],
-                is_hardmode=item["hardmode"]
+                is_hardmode=item["hardmode"],
+                rival1_name=item["rival1_name"],
+                rival1_score=item["rival1_score"],
+                rival2_name=item["rival2_name"],
+                rival2_score=item["rival2_score"],
+                rival3_name=item["rival3_name"],
+                rival3_score=item["rival3_score"]
             )
             db.session.add(new_record)
             
@@ -212,6 +312,7 @@ def receive_html():
         db.session.commit()
 
         DATA_STORE[user_id] = history_data
+        ID_STORE[user_id] = konami_id
         
         return jsonify({"status": "success", "message": "データを正常に処理しました"})
         
@@ -222,6 +323,7 @@ def receive_html():
 
 @app.route('/download')
 def download():
+  user_id = request.remote_addr
   history_data_table = DATA_STORE.get(user_id, None)
     
   # PandasでDataFrameに変換し、メモリ上でCSVを作成（utf-8-sigでExcel対策）
@@ -257,7 +359,13 @@ def download_all():
             "曲名": r.music_name,
             "難易度": r.difficulty,
             "スコア": r.score,
-            "ハードモード": r.is_hardmode
+            "ハードモード": r.is_hardmode,
+            "ライバル1_名前": r.rival1_name,
+            "ライバル1_スコア": r.rival1_score,
+            "ライバル2_名前": r.rival2_name,
+            "ライバル2_スコア": r.rival2_score,
+            "ライバル3_名前": r.rival3_name,
+            "ライバル3_スコア": r.rival3_score            
         })
         
     # 3. DataFrameに変換し、メモリ上でCSVを作成（Excel文字化け対策のBOM付きUTF-8）
