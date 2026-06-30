@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>jubeat 楽曲マスター管理</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background-color: #f8f9fa; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .btn { padding: 10px 15px; font-size: 15px; cursor: pointer; background-color: #007BFF; color: white; border: none; border-radius: 4px; font-weight: bold; text-decoration: none; display: inline-block; }
+        .btn-danger { background-color: #dc3545; }
+        .form-box { background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        table { border-collapse: collapse; width: 100%; margin-top: 15px; background: white; }
+        th, td { padding: 10px; text-align: left; border: 1px solid #dee2e6; }
+        th { background-color: #f1f3f5; }
+        .flash-success { color: #28a745; font-weight: bold; margin-bottom: 15px; }
+        .flash-error { color: #dc3545; font-weight: bold; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛠️ 楽曲マスター 管理用ページ</h1>
+        <p><a href="/" class="btn" style="background-color: #6c757d;">📋 ランキング一覧ページへ戻る</a></p>
+
+        <!-- 通知メッセージ表示エリア -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- 1. CSV一括アップロードフォーム -->
+        <div class="form-box">
+            <h3>🎵 CSVファイルから楽曲を一括登録</h3>
+            <p style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                ファイル形式：CSV（カンマ区切り）<br>
+                必須ヘッダー項目：<code>music_id</code>, <code>seq_id</code>, <code>comment</code><br>
+                ※ <code>seq_id</code> の値は、0=BASIC、1=ADVANCED、2=EXTREME です。既にある曲はスキップされます。
+            </p>
+            
+            <form action="/admin" method="post" enctype="multipart/form-data">
+                <input type="file" name="file" accept=".csv" required style="font-size: 16px; margin-bottom: 15px;"><br>
+                <button type="submit" class="btn">📤 CSVを一括アップロードして登録</button>
+            </form>
+        </div>
+
+        <!-- 2. 現在の登録楽曲一覧表示 -->
+        <div class="form-box">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0;">📋 現在登録されている対象楽曲一覧</h3>
+                <!-- マスター全クリアボタン -->
+                <form action="/admin/clear_master" method="post" onsubmit="return confirm('本当にマスター楽曲をすべて削除しますか？（ランキングデータ自体は削除されません）');">
+                    <button type="submit" class="btn btn-danger" style="padding: 6px 12px; font-size: 13px;">全楽曲をクリア</button>
+                </form>
+            </div>
+
+            {% if current_masters %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">通番(ID)</th>
+                            <th style="width: 30%;">楽曲ID (mid)</th>
+                            <th style="width: 20%;">難易度</th>
+                            <th style="width: 35%;">管理用メモ (comment)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in current_masters %}
+                        <tr>
+                            <td>{{ m.id }}</td>
+                            <td style="font-family: monospace;">{{ m.music_id }}</td>
+                            <td><strong>{{ diff_labels.get(m.seq_id, "UNKNOWN") }}</strong></td>
+                            <td>{{ m.comment }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p style="color: #666; margin-top: 15px;">現在、登録されている楽曲はありません。上のフォームからCSVを読み込ませてください。</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

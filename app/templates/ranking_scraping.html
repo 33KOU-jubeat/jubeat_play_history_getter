@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>jubeat 大会対策用ランキング一括表示(仮)</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background-color: #f8f9fa; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .btn { padding: 12px 20px; font-size: 16px; cursor: pointer; background-color: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold; text-decoration: none; display: inline-block; }
+        .music-block { background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .music-title { font-size: 20px; color: #333; border-bottom: 2px solid #28a745; padding-bottom: 8px; margin-top: 0; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #edf2f7; }
+        th { background-color: #f7fafc; color: #4a5568; }
+        tr:nth-child(-n+3) { font-weight: bold; background-color: #fffaf0; } /* 上位3名を少し強調 */
+        .rank-badge { display: inline-block; width: 24px; text-align: center; border-radius: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>jubeat 登録楽曲全国ランキング一覧</h1>
+        
+        <!-- 一括更新トリガーボタン -->
+        <div style="margin-bottom: 30px;">
+            <form action="/trigger_scraping_all" method="post">
+                <button type="submit" class="btn">🔄 データベースの全楽曲ランキングを一括更新(約2分ほどかかります)</button>
+            </form>
+            
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                {% for message in messages %}
+                  <p style="color: #28a745; font-weight: bold; margin-top: 10px;">{{ message }}</p>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+        </div>
+        <!-- ランキング絞り込み検索フォーム -->
+        <div style="background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <h3 style="margin-top: 0; color: #4a5568;">🔍 ランキング表示の絞り込み</h3>
+            <form action="/ranking_scraping" method="get" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+                
+                <!-- プレーヤー名検索 -->
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="font-size: 14px; font-weight: bold; color: #4a5568;">プレーヤー名（部分一致）：</label>
+                    <input type="text" name="search_player" value="{{ search_player }}" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" placeholder="プレーヤー名を入力">
+                </div>
+
+                <!-- 楽曲名検索 -->
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="font-size: 14px; font-weight: bold; color: #4a5568;">楽曲名（部分一致）：</label>
+                    <input type="text" name="search_music" value="{{ search_music }}" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;" placeholder="曲名や[EXTREME]など">
+                </div>
+
+                <!-- プレイ日時以降検索 -->
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="font-size: 14px; font-weight: bold; color: #4a5568;">プレイ日時（指定日時以降）：</label>
+                    <input type="datetime-local" name="search_date" value="{{ search_date }}" style="width: 100%; padding: 7px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box;">
+                </div>
+
+                <!-- ボタンエリア -->
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn" style="background-color: #007BFF; padding: 9px 20px;">検索・絞り込み</button>
+                    <!-- 検索をクリアして全件表示に戻すボタン -->
+                    <a href="/ranking_scraping" class="btn" style="background-color: #e2e8f0; color: #4a5568; padding: 9px 20px;">リセット</a>
+                </div>
+
+            </form>
+        </div>
+        <!-- 💡 曲ごとにループしてまとめて表示 -->
+        {% if grouped_data %}
+            {% for music_name, records in grouped_data.items() %}
+                <div class="music-block">
+                    <h2 class="music-title">{{ music_name }}</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 40%;">プレーヤー名</th>
+                                <th style="width: 25%;">スコア</th>
+                                <th style="width: 25%;">プレイ日時</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in records %}
+                            <tr>
+                                <td style="color: #2b6cb0;">{{ r.player_name }}</td>
+                                <td style="font-family: monospace;">{{ "{:,}".format(r.score) }}</td>
+                                <td style="color: #718096; font-size: 14px;">{{ r.play_date }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p style="color: #718096;">現在、表示できるランキングデータがありません。上のボタンを押してデータを同期してください。</p>
+        {% endif %}
+    </div>
+</body>
+</html>
