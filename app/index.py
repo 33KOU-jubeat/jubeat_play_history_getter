@@ -15,10 +15,21 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from app import static
 from datetime import datetime  # 日時の比較判定用にインポート
+import threading  # 非同期処理（マルチスレッド）のために追加
 
 app = Flask(__name__)
 app.secret_key = "jubeat_secret_key_12345"
 app.register_blueprint(static.app)
+
+# グローバル変数で現在の実行ステータスを管理（画面に進行状況を出すため）
+SCRAPING_STATUS = {
+    "is_running": False,
+    "success_count": 0,
+    "failed_count": 0,
+    "total_count": 0
+}
+
+DEBUG_MESSAGE = ""
 
 DATA_STORE = {}
 ID_STORE = {}
@@ -68,6 +79,11 @@ class JubeatRanking(db.Model):
     player_name = db.Column(db.String(100), nullable=False)
     score = db.Column(db.Integer, nullable=False)
     play_date = db.Column(db.String(50), nullable=False)
+
+# ランキング結果最終更新日時格納用テーブル
+class RankingUpdate(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    update_date = db.Column(db.String(255), nullable=False)
 
 # アプリ起動時にテーブルが存在しない場合は自動作成する
 with app.app_context():
@@ -361,6 +377,32 @@ def fetch_and_save_ranking(music_id, seq_id):
         db.session.rollback()
         return False, f"通信または解析エラーが発生しました: {str(e)}"
 
+# 実際のスクレイピング処理を裏で動かすための別の関数に分ける
+def background_scraping_task(app_context, masters):
+    global SCRAPING_STATUS
+    global DEBUG_MESSAGE
+    
+    # Flaskのデータベース操作（SQLAlchemy）を別スレッドで行うためのコンテキスト設定
+    with app_context:
+        SCRAPING_STATUS["is_running"] = True
+        SCRAPING_STATUS["success_count"] = 0
+        SCRAPING_STATUS["failed_count"] = 0
+        SCRAPING_STATUS["total_count"] = len(masters)
+        
+        for item in masters:
+            # データベース接続が切れないように、必要に応じてマージンを持たせる
+            success, info = fetch_and_save_ranking(item.music_id, item.seq_id)
+            if success:
+                SCRAPING_STATUS["success_count"] += 1
+            else:
+                SCRAPING_STATUS["failed_count"] += 1
+            
+            # コナミへの負荷軽減のための1秒待機
+            time.sleep(1.0)
+            DEBUG_MESSAGE = info
+            
+        db.session.commit()
+        SCRAPING_STATUS["is_running"] = False
 
 # --- ルーティング ---
 @app.route('/')
@@ -563,7 +605,7 @@ def ranking_scraping():
     # 条件に合うデータを一度取得（曲名、順位順）
     all_rankings = query.order_by(JubeatRanking.music_name).all()
 
-    # 2. 💡【日付エラー解決策】Python側で確実な日付オブジェクト比較を行う
+    # 2.【日付エラー解決策】Python側で確実な日付オブジェクト比較を行う
     filtered_rankings = []
     
     if search_date:
@@ -573,13 +615,13 @@ def ranking_scraping():
             
             for r in all_rankings:
                 # データベース内の文字列（'2026/2/2 15:30' や '2026/05/10 09:00'）をパース
-                # ⚠️ 公式サイトの「月」や「日」が1桁（スペースや0埋めなし）の場合でも柔軟に対応できる正規表現的パース
+                # 公式サイトの「月」や「日」が1桁（スペースや0埋めなし）の場合でも柔軟に対応できる正規表現的パース
                 # スラッシュやスペースの表記の揺れを考慮して変換します
                 try:
                     # 表記が '2026/2/2 15:30' でも '2026/02/02 15:30' でも正しく解釈されます
                     record_dt = datetime.strptime(r.play_date.strip(), '%Y/%m/%d %H:%M')
                     
-                    # 💡 日付オブジェクト同士で純粋な大小比較を行う（これで2月や5月が弾かれます）
+                    # 日付オブジェクト同士で純粋な大小比較を行う（これで2月や5月が弾かれます）
                     if record_dt >= target_dt:
                         filtered_rankings.append(r)
                 except ValueError:
@@ -598,37 +640,61 @@ def ranking_scraping():
         if r.music_name not in grouped_data:
             grouped_data[r.music_name] = []
         grouped_data[r.music_name].append(r)
-        
+
+    update_record = RankingUpdate.query.order_by(RankingUpdate.id.desc()).first()
+    if not update_record:
+        update_date = ""
+    else:
+        update_date = update_record.update_date
+
     return render_template(
         'ranking_scraping.html', 
         grouped_data=grouped_data,
         search_player=search_player,
         search_music=search_music,
-        search_date=search_date
+        search_date=search_date,
+        update_date=update_date,
+        status=SCRAPING_STATUS
     )
 
-# 💡 新設：ボタンクリックでマスターに登録された全楽曲を自動巡回する処理
+# ボタンクリックでマスターに登録された全楽曲を自動巡回する処理
 @app.route('/trigger_scraping_all', methods=['POST'])
 def trigger_scraping_all():
-    # マスターデータを全件取得
-    masters = JubeatMusicMaster.query.all()
     
-    success_count = 0
-    failed_count = 0
-    
-    for item in masters:
-        success, info = fetch_and_save_ranking(item.music_id, item.seq_id)
-        if success:
-            success_count += 1
-        else:
-            failed_count += 1
+    dt_now = datetime.now()
+    # 新しいレコードを追加
+    new_record = RankingUpdate(
+        update_date=dt_now
+    )
+    db.session.add(new_record)
             
-        
-        # 【重要】コナミのサーバーに大量の負荷（DoS攻撃）をかけないよう、1曲ごとに1秒の待機時間を挟む
-        time.sleep(1.0)
-        
+    # まとめてDBに保存確定（コミット）
     db.session.commit()
-    flash(f"一括更新が完了しました。（成功: {success_count}件 / 失敗: {failed_count}件）")
+
+    global SCRAPING_STATUS
+    
+    # すでに裏で実行中の場合は二重起動を防ぐ
+    if SCRAPING_STATUS["is_running"]:
+        flash("現在、すでに一括更新がバックグラウンドで実行中です。しばらくお待ちください。")
+        return redirect(url_for('ranking_scraping'))
+        
+    masters = JubeatMusicMaster.query.all()
+    if not masters:
+        flash("楽曲マスターに曲が登録されていません。")
+        return redirect(url_for('ranking_scraping'))
+        
+    # 現スレッドのFlaskアプリコンテキストを複製して裏スレッドに引き渡す
+    app_context = app.app_context()
+    
+    # threadingを使って、処理を別動隊（バックグラウンド）に丸投げする
+    thread = threading.Thread(
+        target=background_scraping_task, 
+        args=(app_context, masters)
+    )
+    thread.start() # 裏で実行開始！
+    
+    # 30秒を待たずに、一瞬でユーザー画面をリフレッシュする
+    flash("楽曲ランキングの一括更新をバックグラウンドで開始しました。完了まで約2分かかります。ページを再読み込みして進捗を確認してください。")
     return redirect(url_for('ranking_scraping'))
 
 

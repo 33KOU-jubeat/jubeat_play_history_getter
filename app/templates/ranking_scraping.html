@@ -20,12 +20,25 @@
     <div class="container">
         <h1>jubeat 登録楽曲全国ランキング一覧</h1>
         
-        <!-- 一括更新トリガーボタン -->
+        <!-- 一括更新トリガーボタンのエリア -->
         <div style="margin-bottom: 30px;">
             <form action="/trigger_scraping_all" method="post">
-                <button type="submit" class="btn">🔄 データベースの全楽曲ランキングを一括更新(約2分ほどかかります)</button>
+                <!-- 💡 実行中はボタンを押せない（無効化）ようにする -->
+                <button type="submit" class="btn" {% if status.is_running %}disabled style="background-color: #6c757d; cursor: not-allowed;"{% endif %}>
+                    {% if status.is_running %}🔄 現在裏で自動巡回中...{% else %}🔄 データベースの全楽曲ランキングを一括更新(約2分かかります){% endif %}
+                </button>
             </form>
-            
+            <p style="color: #28a745; font-weight: bold; margin-top: 10px;">※ 最終更新日時:{{ update_date }}</p>
+            <!-- 💡 新設：実行中の進捗メーター表示 -->
+            {% if status.is_running %}
+                <div style="margin-top: 15px; padding: 15px; background-color: #e3f2fd; border-left: 5px solid #007BFF; border-radius: 4px;">
+                    <strong style="color: #007BFF;">⚡ バックグラウンド更新が走っています：</strong><br>
+                    進捗: <strong>{{ status.success_count + status.failed_count }}</strong> / {{ status.total_count }} 件完了 
+                    (成功: {{ status.success_count }} / 失敗: {{ status.failed_count }})<br>
+                    <small style="color: #666;">※ブラウザを閉じてもサーバー側で処理は継続します。数分後にページをリロードしてください。</small>
+                </div>
+            {% endif %}
+
             {% with messages = get_flashed_messages() %}
               {% if messages %}
                 {% for message in messages %}
