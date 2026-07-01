@@ -14,7 +14,7 @@ from flask import Flask, render_template, request, send_file, session, jsonify, 
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from app import static
-from datetime import datetime  # 日時の比較判定用にインポート
+from datetime import datetime, timezone, timedelta  # 日時の比較判定用にインポート
 import threading  # 非同期処理（マルチスレッド）のために追加
 
 app = Flask(__name__)
@@ -602,8 +602,8 @@ def ranking_scraping():
     if search_music:
         query = query.filter(JubeatRanking.music_name.like(f"%{search_music}%"))
 
-    # 条件に合うデータを一度取得（曲名、順位順）
-    all_rankings = query.order_by(JubeatRanking.music_name).all()
+    # 一旦データベースから全件取得（ここではまだ並び替えない）
+    all_rankings = query.all()
 
     # 2.【日付エラー解決策】Python側で確実な日付オブジェクト比較を行う
     filtered_rankings = []
@@ -634,6 +634,18 @@ def ranking_scraping():
         # 日時検索が空の場合はそのまま全件を使用
         filtered_rankings = all_rankings
 
+    # Python側で play_date を正しい日時にパースして最新順にソートする
+    # 0埋めがなくても、datetimeオブジェクトに変換されるため完璧にカレンダー順で並び替わります
+    def get_record_datetime(record):
+        try:
+            return datetime.strptime(record.play_date.strip(), '%Y/%m/%d %H:%M')
+        except ValueError:
+            # 万が一パースできない壊れた日付データがあった場合は、過去の固定日時を返して最下位にする
+            return datetime.min
+
+    # reverse=True を指定することで「最新日時が一番上（降順）」になります
+    filtered_rankings.sort(key=get_record_datetime, reverse=True)
+
     # 3. テンプレートに渡すために「曲名」をキーにした辞書に整形
     grouped_data = {}
     for r in filtered_rankings:
@@ -661,10 +673,13 @@ def ranking_scraping():
 @app.route('/trigger_scraping_all', methods=['POST'])
 def trigger_scraping_all():
     
-    dt_now = datetime.now()
+    utc_now = datetime.now(timezone.utc)
+    jst_zone = timezone(timedelta(hours=9))
+    jst_now = utc_now.astimezone(jst_zone)
+    
     # 新しいレコードを追加
     new_record = RankingUpdate(
-        update_date=dt_now
+        update_date=jst_now
     )
     db.session.add(new_record)
             
