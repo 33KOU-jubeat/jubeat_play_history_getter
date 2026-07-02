@@ -593,6 +593,11 @@ def ranking_scraping():
     search_player = request.args.get('search_player', '').strip()
     search_music = request.args.get('search_music', '').strip()
     search_date = request.args.get('search_date', '').strip()  # 'YYYY-MM-DDTHH:MM'
+    sort_by = request.args.get('sort_by', 'play_date').strip()
+
+    # まず楽曲マスターから「idの昇順（登録順）」で全楽曲を取得する
+    # これにより、画面に表示される楽曲の絶対的な並び順（土台）が固定されます
+    music_masters = JubeatMusicMaster.query.order_by(JubeatMusicMaster.id.asc()).all()
 
     query = JubeatRanking.query
 
@@ -646,12 +651,39 @@ def ranking_scraping():
     # reverse=True を指定することで「最新日時が一番上（降順）」になります
     filtered_rankings.sort(key=get_record_datetime, reverse=True)
 
-    # 3. テンプレートに渡すために「曲名」をキーにした辞書に整形
     grouped_data = {}
-    for r in filtered_rankings:
-        if r.music_name not in grouped_data:
-            grouped_data[r.music_name] = []
-        grouped_data[r.music_name].append(r)
+    if sort_by == 'master_id':
+        #【並び順の解決策】マスターの曲順を維持した辞書をあらかじめ作成する
+        # 難易度ラベルのマッピングを用意
+        diff_labels = {0: "BASIC", 1: "ADVANCED", 2: "EXTREME"}
+        
+        for m in music_masters:
+            # スクレイピング時に保存される曲名フォーマット（例: "曲名 [EXTREME]"）を再現
+            # fetch_and_save_ranking 内の save_title の命名規則と一致させます
+            # もし comment カラムに正式な曲名が入っていない場合は、後述の補足コードを参照してください
+            save_title = f"{m.comment} [{diff_labels.get(m.seq_id, 'UNKNOWN')}]"
+            
+            # マスターに登録されている順番で空のリストを初期化（器を作る）
+            grouped_data[save_title] = []
+
+        # ソート済みのランキングデータを、用意した器に振り分ける
+        for r in filtered_rankings:
+            # すでに器（曲名）が存在していればデータを追加
+            if r.music_name in grouped_data:
+                grouped_data[r.music_name].append(r)
+            else:
+                # 万が一、マスター削除などで器がない古いデータが存在した場合のセーフティ
+                grouped_data[r.music_name] = [r]
+
+        # 検索等で「中身が空になった楽曲ブロック」を画面非表示にしたい場合のクレンジング
+        # （空のブロックもそのまま表示させたい場合は、このループ処理は消去してOKです）
+        grouped_data = {k: v for k, v in grouped_data.items() if len(v) > 0}
+    else:
+        # テンプレートに渡すために「曲名」をキーにした辞書に整形
+        for r in filtered_rankings:
+            if r.music_name not in grouped_data:
+                grouped_data[r.music_name] = []
+            grouped_data[r.music_name].append(r)
 
     update_record = RankingUpdate.query.order_by(RankingUpdate.id.desc()).first()
     if not update_record:
@@ -666,6 +698,7 @@ def ranking_scraping():
         search_music=search_music,
         search_date=search_date,
         update_date=update_date,
+        sort_by=sort_by,
         status=SCRAPING_STATUS
     )
 
@@ -676,10 +709,12 @@ def trigger_scraping_all():
     utc_now = datetime.now(timezone.utc)
     jst_zone = timezone(timedelta(hours=9))
     jst_now = utc_now.astimezone(jst_zone)
+    # サーバーがUTCであっても、この段階で「2026/07/02 14:36」という純粋な文字に固定します
+    jst_now_str = jst_now.strftime('%Y/%m/%d %H:%M')
     
     # 新しいレコードを追加
     new_record = RankingUpdate(
-        update_date=jst_now
+        update_date=jst_now_str
     )
     db.session.add(new_record)
             

@@ -72,9 +72,50 @@
 
                 <!-- ボタンエリア -->
                 <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="btn" style="background-color: #007BFF; padding: 9px 20px;">検索・絞り込み</button>
-                    <!-- 検索をクリアして全件表示に戻すボタン -->
-                    <a href="/ranking_scraping" class="btn" style="background-color: #e2e8f0; color: #4a5568; padding: 9px 20px;">リセット</a>
+                    <!-- 既存の検索・リセットボタン -->
+                    <div style="display: flex; gap: 10px;">
+                        <!-- 現在のソート順の状態を検索時にも維持させるための隠しパラメータ -->
+                        <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                        <button type="submit" class="btn" style="background-color: #007BFF; padding: 9px 20px;">検索・絞り込み</button>
+                        <a href="/ranking_scraping" class="btn" style="background-color: #e2e8f0; color: #4a5568; padding: 9px 20px;">リセット</a>
+                    </div>
+
+                    <!-- ソート順切り替えトグルスイッチ風リンク -->
+                    <div style="background: #edf2f7; padding: 4px; border-radius: 6px; display: flex; gap: 5px;">
+                        {% if sort_by == 'play_date' %}
+                            <!-- 更新日時順ボタン -->
+                            <a href="/ranking_scraping?search_player={{ search_player }}&search_music={{ search_music }}&search_date={{ search_date }}&sort_by=play_date" 
+                            class="btn" 
+                            style="padding: 6px 12px; font-size: 13px; border-radius: 4px;
+                            background-color: white; color: #2d3748; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: bold;">
+                                🕒 更新日時順
+                            </a>
+
+                            <!-- マスターID順ボタン -->
+                            <a href="/ranking_scraping?search_player={{ search_player }}&search_music={{ search_music }}&search_date={{ search_date }}&sort_by=master_id" 
+                            class="btn" 
+                            style="padding: 6px 12px; font-size: 13px; border-radius: 4px;
+                            background-color: transparent; color: #718096;">
+                                🔢 マスターID順
+                            </a>
+                        {% else %}
+                            <!-- 更新日時順ボタン -->
+                            <a href="/ranking_scraping?search_player={{ search_player }}&search_music={{ search_music }}&search_date={{ search_date }}&sort_by=play_date" 
+                            class="btn" 
+                            style="padding: 6px 12px; font-size: 13px; border-radius: 4px;
+                            background-color: transparent; color: #718096;">
+                                🕒 更新日時順
+                            </a>
+
+                            <!-- マスターID順ボタン -->
+                            <a href="/ranking_scraping?search_player={{ search_player }}&search_music={{ search_music }}&search_date={{ search_date }}&sort_by=master_id" 
+                            class="btn" 
+                            style="padding: 6px 12px; font-size: 13px; border-radius: 4px;
+                            background-color: white; color: #2d3748; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: bold;">
+                                🔢 マスターID順
+                            </a>
+                        {% endif %}
+                    </div>
                 </div>
 
             </form>
