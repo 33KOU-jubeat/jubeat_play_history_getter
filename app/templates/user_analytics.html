@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ current_user }} さんのスコア分析</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background-color: #f8f9fa; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .btn { padding: 10px 15px; font-size: 15px; cursor: pointer; background-color: #007BFF; color: white; border: none; border-radius: 4px; font-weight: bold; text-decoration: none; display: inline-block; }
+        .card-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; margin-bottom: 30px; }
+        .card { background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 15px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .card-title { font-size: 13px; color: #6c757d; font-weight: bold; margin-bottom: 5px; }
+        .card-value { font-size: 22px; color: #2d3748; font-weight: bold; font-family: monospace; }
+        .form-box { background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; margin-bottom: 25px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 15px; background: white; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        th { background-color: #f1f3f5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 スコア傾向・統計分析</h1>
+        <p>
+            <a href="/user/{{ current_user }}" class="btn" style="background-color: #6c757d;">📋 マイページへ戻る</a>
+        </p>
+
+        <!-- 1. 楽曲選択フォーム -->
+        <div class="form-box">
+            <h3>🎵 分析する楽曲パターンを選択</h3>
+            <form id="analyticsForm" action="/user/{{ current_user }}/analytics" method="get">
+                <!-- 💡 JavaScriptで3つの値を連動させて送信するプルダウン -->
+                <select id="music_selector" style="padding: 10px; width: 85%; font-size: 16px; border-radius: 4px; border: 1px solid #cbd5e0;" onchange="submitWithParams()">
+                    <option value="">-- 楽曲 [難易度] (モード) を選択してください --</option>
+                    {% for item in dropdown_items %}
+                        <option value="{{ item.music_name }}|{{ item.difficulty }}|{{ item.is_hard }}"
+                            {% if item.music_name == target_music and item.difficulty == target_diff and item.is_hard == target_hard %}selected{% endif %}>
+                            {{ item.display_text }}
+                        </option>
+                    {% endfor %}
+                </select>
+                
+                <!-- 隠しパラメータ：送信時に値を分解してセットする用 -->
+                <input type="hidden" name="music_name" id="hidden_music">
+                <input type="hidden" name="difficulty" id="hidden_diff">
+                <input type="hidden" name="is_hard" id="hidden_hard">
+            </form>
+        </div>
+
+        <script>
+            function submitWithParams() {
+                const selector = document.getElementById('music_selector');
+                const val = selector.value;
+                if (!val) return;
+                
+                // "曲名|難易度|True/False" の形式で分割
+                const parts = val.split('|');
+                
+                document.getElementById('hidden_music').value = parts[0];
+                document.getElementById('hidden_diff').value = parts[1];
+                document.getElementById('hidden_hard').value = parts[2];
+                
+                // フォームを送信
+                document.getElementById('analyticsForm').submit();
+            }
+        </script>
+
+        {% if target_music and stats %}
+            <h2>分析結果: <span style="color: #007BFF;">{{ target_music }} [{{ target_diff }}] {% if target_hard == "1" %}(HARD){% endif %}</span></h2>
+
+            <!-- 2. 統計情報のカード表示（視覚化） -->
+            <div class="card-container">
+                <div class="card" style="border-top: 4px solid #007BFF;">
+                    <div class="card-title">プレイ回数</div>
+                    <div class="card-value" style="color: #007BFF;">{{ stats.play_count }} <span style="font-size:14px;">回</span></div>
+                </div>
+                <div class="card" style="border-top: 4px solid #28a745;">
+                    <div class="card-title">自己ベスト</div>
+                    <div class="card-value" style="color: #28a745;">{{ "{:,}".format(stats.max_score) }}</div>
+                </div>
+                <div class="card" style="border-top: 4px solid #ffc107;">
+                    <div class="card-title">平均スコア</div>
+                    <div class="card-value" style="color: #b78a00;">{{ "{:,}".format(stats.average_score) }}</div>
+                </div>
+                <div class="card" style="border-top: 4px solid #17a2b8;">
+                    <div class="card-title">中央値</div>
+                    <div class="card-value" style="color: #17a2b8;">{{ "{:,}".format(stats.median_score) }}</div>
+                </div>
+                <div class="card" style="border-top: 4px solid #dc3545;">
+                    <div class="card-title">ワースト</div>
+                    <div class="card-value" style="color: #dc3545;">{{ "{:,}".format(stats.min_score) }}</div>
+                </div>
+            </div>
+
+            <!-- 3. 対象楽曲の過去のプレイログ一覧 -->
+            <h3>📋 この曲のプレイデータ履歴（新しい順）</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">プレイ日時</th>
+                        <th style="width: 40%;">スコア</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in target_records %}
+                    <tr>
+                        <td><strong>{{ r.date }}</strong></td>
+                        <td style="font-family: monospace; font-size: 16px;">{{ "{:,}".format(r.score) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+        {% elif target_music %}
+            <p style="color: #dc3545; font-weight: bold;">選択した楽曲の有効なスコアデータ（数値）が登録されていません。</p>
+        {% endif %}
+    </div>
+</body>
+</html>

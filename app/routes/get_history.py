@@ -222,24 +222,6 @@ def index():
   else :
     return render_template('index.html', history_data_table = None, konami_id = None)
 
-# 各ユーザー個別の履歴閲覧ページ
-@get_history_bp.route('/user/<konami_id>')
-def user_page(konami_id):
-    # 指定されたKONAMI IDのデータだけをDBから全件取得
-    records = JubeatHistory.query.filter_by(konami_id=konami_id).all()
-    
-    data = []
-    for r in records:
-        data.append({
-            "プレイ日時": r.date,
-            "曲名": r.music_name,
-            "難易度": r.difficulty,
-            "スコア": r.score,
-            "ハードモード": r.is_hardmode
-        })
-        
-    return render_template('index.html', data=data if data else None, current_user=konami_id)
-
 # 2. JavaScriptからHTMLデータを受け取るAPI（POSTエンドポイント）
 @get_history_bp.route('/receive_html', methods=['POST'])
 def receive_html():
@@ -318,37 +300,6 @@ def download():
     as_attachment=True,
     download_name='jubeat_history.csv'
   )
-
-# 個別CSVダウンロード（URLのKONAMI IDを基準にする）
-@get_history_bp.route('/download/<konami_id>')
-def download_user_csv(konami_id):
-    records = JubeatHistory.query.filter_by(konami_id=konami_id).all()
-    if not records:
-        return "データがありません", 400
-        
-    data_for_df = []
-    for r in records:
-        data_for_df.append({
-            "プレー日時": r.date,
-            "曲名": r.music_name,
-            "難易度": r.difficulty,
-            "スコア": r.score,
-            "ハードモード": r.is_hardmode,
-            "ライバル1_名前": r.rival1_name,
-            "ライバル1_スコア": r.rival1_score,
-            "ライバル2_名前": r.rival2_name,
-            "ライバル2_スコア": r.rival2_score,
-            "ライバル3_名前": r.rival3_name,
-            "ライバル3_スコア": r.rival3_score            
-        })
-    
-    df = pd.DataFrame(data_for_df)
-    csv_buffer = io.BytesIO()
-    df.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
-    csv_buffer.seek(0)
-    
-    return send_file(csv_buffer, mimetype='text/csv', as_attachment=True, download_name=f'jubeat_history_{konami_id}.csv')
-
 
 # データベース内の全データをCSV形式でダウンロードするルート([TODO]隠し機能にする予定)
 @get_history_bp.route('/download_all')

@@ -9,6 +9,7 @@ from app.config import Config
 from app.routes.ranking_scraping import ranking_scraping_bp
 from app.routes.admin import admin_bp
 from app.routes.get_history import get_history_bp
+from app.routes.userpage import userpage_bp
 
 app = Flask(__name__)
 app.register_blueprint(static.app)
@@ -26,6 +27,7 @@ db.init_app(app)
 app.register_blueprint(ranking_scraping_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(get_history_bp)
+app.register_blueprint(userpage_bp)
 
 # アプリ起動時にテーブルが存在しない場合は自動作成する
 with app.app_context():
@@ -36,5 +38,3 @@ with app.app_context():
         sample2 = JubeatMusicMaster(music_id="69014196", seq_id=2, comment="[]DENTITY")
         db.session.add_all([sample1, sample2])
         db.session.commit()
-
-

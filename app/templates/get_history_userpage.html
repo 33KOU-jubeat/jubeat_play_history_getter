@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jubeatプレー履歴保管ツール</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background-color: #f8f9fa; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .btn { padding: 10px 15px; font-size: 15px; cursor: pointer; background-color: #007BFF; color: white; border: none; border-radius: 4px; font-weight: bold; text-decoration: none; display: inline-block; }
+        .card-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; margin-bottom: 30px; }
+        .card { background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 15px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .card-title { font-size: 13px; color: #6c757d; font-weight: bold; margin-bottom: 5px; }
+        .card-value { font-size: 22px; color: #2d3748; font-weight: bold; font-family: monospace; }
+        .form-box { background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; margin-bottom: 25px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 15px; background: white; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        th { background-color: #f1f3f5; }
+    </style>
+  </head>
+  <body>
+    <h1>jubeat プレー履歴 CSVツール (JS連携版)</h1>
+    {% if current_user %}
+      <!-- ユーザー個別ページが表示されている場合 -->
+      <h2>ユーザー: <span style="color: #007BFF;">{{ current_user }}</span> さんのマイページ</h2>
+      <p>
+        <a href="/user/{{ current_user }}/analytics" class="btn" style="background-color: #17a2b8;">📊 スコア統計・分析ページを開く</a>
+      </p>
+      <p><a href="/" class="btn">トップへ戻る</a></p>
+
+      {% if data %}
+        <a href="/download/{{ current_user }}" class="btn btn-download">このデータのCSVをダウンロード</a>
+
+        <h2>保存データプレビュー</h2>
+        <table>
+          <tr>
+            <th>プレイ日時</th>
+            <th>曲名</th>
+            <th>難易度</th>
+            <th>スコア</th>
+            <th>ハードモード</th>
+          </tr>
+          {% for row in data %}
+            <tr>
+              <td>{{ row['プレイ日時'] }}</td>
+              <td>{{ row['曲名'] }}</td>
+              <td>{{ row['難易度'] }}</td>
+              <td>{{ row['スコア'] }}</td>
+              <td>{{ row['ハードモード'] }}</td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <p style="color: #666;">※まだデータベースにあなたの履歴が登録されていません。ブックマークレットを実行してデータを送信してください。</p>
+      {% endif %}
+
+    {% else %}
+    {% endif %}
+  </body>
+</html>

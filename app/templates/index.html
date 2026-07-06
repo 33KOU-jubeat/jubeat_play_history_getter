@@ -5,123 +5,103 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>jubeatプレー履歴保管ツール</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background-color: #f8f9fa; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .btn { padding: 10px 15px; font-size: 15px; cursor: pointer; background-color: #007BFF; color: white; border: none; border-radius: 4px; font-weight: bold; text-decoration: none; display: inline-block; }
+        .card-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; margin-bottom: 30px; }
+        .card { background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 15px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .card-title { font-size: 13px; color: #6c757d; font-weight: bold; margin-bottom: 5px; }
+        .card-value { font-size: 22px; color: #2d3748; font-weight: bold; font-family: monospace; }
+        .form-box { background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; margin-bottom: 25px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 15px; background: white; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        th { background-color: #f1f3f5; }
+    </style>
   </head>
   <body>
     <h1>jubeat プレー履歴 CSVツール (JS連携版)</h1>
-    {% if current_user %}
-      <!-- ユーザー個別ページが表示されている場合 -->
-      <h2>ユーザー: <span style="color: #007BFF;">{{ current_user }}</span> さんのマイページ</h2>
-      <p><a href="/" class="btn">トップへ戻る</a></p>
-
-      {% if data %}
-        <a href="/download/{{ current_user }}" class="btn btn-download">このデータのCSVをダウンロード</a>
-
-        <h2>保存データプレビュー</h2>
-        <table>
+    <h2>使い方</h2>
+    <ol>
+      <li>jubeatの「プレー履歴」ページを開いてログインします。</li>
+      <li>以下のbookmarkletをプレー履歴ページで実行してください。</li>
+      <textarea rows="1" id="bml_n" onclick="this.select()" readonly="">javascript:(async()=>{const%20e=document.querySelectorAll('#play_history');if(0===e.length)return%20void%20alert("履歴データ（#play_history）が見つかりません。jubeatの履歴ページを開いているか確認してください。");const%20t=Array.from(e).map((e=>e.outerHTML)),r="https://jubeat-play-history-getter.onrender.com/receive_html";const%20k=document.querySelector(".cl_pc_dsp").textContent.trim();try{const%20e=await%20fetch(r,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({html_list:t,konami_id:k})});e.ok?(alert("データの送信に成功しました！ツール画面を確認してください。"),window.open("https://jubeat-play-history-getter.onrender.com/","_blank")):alert("サーバーエラーが発生しました。ステータス:%20"+e.status)}catch(e){alert("送信に失敗しました。CORSエラーまたはサーバーが起動していない可能性があります:%20"+e)}})();</textarea>
+      <li>送信成功のアラートが出たら、このページを再読み込み（リフレッシュ）してください。</li>
+    </ol>
+    {% if konami_id %}
+      <p>{{ konami_id }}さんの以下のプレー履歴を登録します。</p>
+      <button type="button" class="btn" onclick="goToUserPage('{{ konami_id }}')">ユーザーページへ移動</button>
+      <script>
+          function goToUserPage(konamiId) {
+              // 3. JavaScriptでURLを生成して画面を遷移させる
+              window.location.href = '/user/' + encodeURIComponent(konamiId);
+          }
+      </script>
+    {% endif %}
+    {% if history_data_table %}
+      <table>
+        <thead>
           <tr>
-            <th>プレイ日時</th>
-            <th>曲名</th>
+            <th>プレー日時</th>
+            <th>楽曲名</th>
             <th>難易度</th>
             <th>スコア</th>
             <th>ハードモード</th>
+            <th>他プレーヤー1</th>
+            <th>他プレーヤー1のスコア</th>
+            <th>他プレーヤー2</th>
+            <th>他プレーヤー2のスコア</th>
+            <th>他プレーヤー3</th>
+            <th>他プレーヤー3のスコア</th>
           </tr>
-          {% for row in data %}
+        </thead>
+        <tbody>
+          <!-- Pythonから渡されたhistory_data_tableを展開 -->
+          {% for history_data in history_data_table %}
             <tr>
-              <td>{{ row['プレイ日時'] }}</td>
-              <td>{{ row['曲名'] }}</td>
-              <td>{{ row['難易度'] }}</td>
-              <td>{{ row['スコア'] }}</td>
-              <td>{{ row['ハードモード'] }}</td>
+              <td>{{ history_data.date }}</td>
+              <td>{{ history_data.music_title }}</td>
+              <td>{{ history_data.difficulty }}</td>
+              <td>{{ history_data.score }}</td>
+              <td>{{ history_data.hardmode }}</td>
+              <td>{{ history_data.rival1_name }}</td>
+              <td>{{ history_data.rival1_score }}</td>
+              <td>{{ history_data.rival2_name }}</td>
+              <td>{{ history_data.rival2_score }}</td>
+              <td>{{ history_data.rival3_name }}</td>
+              <td>{{ history_data.rival3_score }}</td>
             </tr>
           {% endfor %}
-        </table>
-      {% else %}
-        <p style="color: #666;">※まだデータベースにあなたの履歴が登録されていません。ブックマークレットを実行してデータを送信してください。</p>
-      {% endif %}
-
+        </tbody>
+      </table>
+      <!-- CSVダウンロードボタン -->
+      <p><a href="/download" class="btn btn-download">上記データのCSVファイルをダウンロード</a></p>
     {% else %}
-      <h2>使い方</h2>
-      <ol>
-        <li>jubeatの「プレー履歴」ページを開いてログインします。</li>
-        <li>以下のbookmarkletをプレー履歴ページで実行してください。</li>
-        <textarea rows="1" id="bml_n" onclick="this.select()" readonly="">javascript:(async()=>{const%20e=document.querySelectorAll('#play_history');if(0===e.length)return%20void%20alert("履歴データ（#play_history）が見つかりません。jubeatの履歴ページを開いているか確認してください。");const%20t=Array.from(e).map((e=>e.outerHTML)),r="https://jubeat-play-history-getter.onrender.com/receive_html";const%20k=document.querySelector(".cl_pc_dsp").textContent.trim();try{const%20e=await%20fetch(r,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({html_list:t,konami_id:k})});e.ok?(alert("データの送信に成功しました！ツール画面を確認してください。"),window.open("https://jubeat-play-history-getter.onrender.com/","_blank")):alert("サーバーエラーが発生しました。ステータス:%20"+e.status)}catch(e){alert("送信に失敗しました。CORSエラーまたはサーバーが起動していない可能性があります:%20"+e)}})();</textarea>
-        <li>送信成功のアラートが出たら、このページを再読み込み（リフレッシュ）してください。</li>
-      </ol>
-      {% if konami_id %}
-        <p>{{ konami_id }}さんの以下のプレー履歴を登録します。</p>
-        <button type="button" class="btn" onclick="goToUserPage('{{ konami_id }}')">ユーザーページへ移動</button>
-        <script>
-            function goToUserPage(konamiId) {
-                // 3. JavaScriptでURLを生成して画面を遷移させる
-                window.location.href = '/user/' + encodeURIComponent(konamiId);
-            }
-        </script>
-      {% endif %}
-      {% if history_data_table %}
-        <table>
-          <thead>
-            <tr>
-              <th>プレー日時</th>
-              <th>楽曲名</th>
-              <th>難易度</th>
-              <th>スコア</th>
-              <th>ハードモード</th>
-              <th>他プレーヤー1</th>
-              <th>他プレーヤー1のスコア</th>
-              <th>他プレーヤー2</th>
-              <th>他プレーヤー2のスコア</th>
-              <th>他プレーヤー3</th>
-              <th>他プレーヤー3のスコア</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Pythonから渡されたhistory_data_tableを展開 -->
-            {% for history_data in history_data_table %}
-              <tr>
-                <td>{{ history_data.date }}</td>
-                <td>{{ history_data.music_title }}</td>
-                <td>{{ history_data.difficulty }}</td>
-                <td>{{ history_data.score }}</td>
-                <td>{{ history_data.hardmode }}</td>
-                <td>{{ history_data.rival1_name }}</td>
-                <td>{{ history_data.rival1_score }}</td>
-                <td>{{ history_data.rival2_name }}</td>
-                <td>{{ history_data.rival2_score }}</td>
-                <td>{{ history_data.rival3_name }}</td>
-                <td>{{ history_data.rival3_score }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        <!-- CSVダウンロードボタン -->
-        <a href="/download" class="btn btn-download">上記データのCSVファイルをダウンロード</a></br>
-      {% else %}
-        <h3>KONAMI IDを入力して登録済みデータ表示</h3>
-        <input type="text" id="konami_id_input" class="input-text" placeholder="KONAMI IDを入力" required><br>
-        <!-- ボタンクリック時にJavaScript関数を実行 -->
-        <button type="button" class="btn" onclick="goToUserPage_form()">データを見る</button><br>
-        <script>
-            function goToUserPage_form() {
-                // 1. 入力フォームから文字列を取得
-                const konamiId = document.getElementById('konami_id_input').value.trim();
-                
-                // 2. 空白チェック
-                if (!konamiId) {
-                    alert('KONAMI IDを入力してください。');
-                    return;
-                }
-                
-                // 3. JavaScriptでURLを生成して画面を遷移させる
-                window.location.href = '/user/' + encodeURIComponent(konamiId);
-            }
-        </script>
-      {% endif %}
-
-      <a href="/download_all" class="btn btn-download">DB全データをダウンロード</a></br>
-      <a href="/ranking_scraping" class="btn">ランキングスクレイピングページへ</a></br>
-      <a href="/admin" class="btn">ランキングスクレイピング管理ページへ</a></br>
-      <p>次にやること:同一ユーザー、楽曲、難易度、ハードモード有無の履歴を1つにまとめ、譜面毎データページを作る</p>
-      <p>そのうちやること:ライバル勝敗分析機能追加、広告追加</p>
+      <h3>KONAMI IDを入力して登録済みデータ表示</h3>
+      <input type="text" id="konami_id_input" class="input-text" placeholder="KONAMI IDを入力" required><br>
+      <!-- ボタンクリック時にJavaScript関数を実行 -->
+      <button type="button" class="btn" onclick="goToUserPage_form()">データを見る</button><br>
+      <script>
+          function goToUserPage_form() {
+              // 1. 入力フォームから文字列を取得
+              const konamiId = document.getElementById('konami_id_input').value.trim();
+              
+              // 2. 空白チェック
+              if (!konamiId) {
+                  alert('KONAMI IDを入力してください。');
+                  return;
+              }
+              
+              // 3. JavaScriptでURLを生成して画面を遷移させる
+              window.location.href = '/user/' + encodeURIComponent(konamiId);
+          }
+      </script>
     {% endif %}
+
+    <p><a href="/download_all" class="btn btn-download">DB全データをダウンロード</a></p>
+    <p><a href="/ranking_scraping" class="btn">ランキングスクレイピングページへ</a></p>
+    <p><a href="/admin" class="btn">ランキングスクレイピング管理ページへ</a></p>
+    <p>次にやること:同一ユーザー、楽曲、難易度、ハードモード有無の履歴を1つにまとめ、譜面毎データページを作る</p>
+    <p>そのうちやること:ライバル勝敗分析機能追加、広告追加</p>
   </body>
 </html>
