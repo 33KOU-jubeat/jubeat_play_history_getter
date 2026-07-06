@@ -11,11 +11,24 @@ from app.database import db, JubeatHistory
 # userpageという名前のBlueprintを作成
 userpage_bp = Blueprint('userpage', __name__)
 
+# Python側で play_date を正しい日時にパースして最新順にソートする
+# 0埋めがなくても、datetimeオブジェクトに変換されるため完璧にカレンダー順で並び替わります
+def get_record_datetime(record):
+    try:
+        return datetime.strptime(record.date.strip(), '%Y/%m/%d %H:%M')
+    except ValueError:
+        # 万が一パースできない壊れた日付データがあった場合は、過去の固定日時を返して最下位にする
+        return datetime.min
+
+
 # 各ユーザー個別の履歴閲覧ページ
 @userpage_bp.route('/user/<konami_id>')
 def user_page(konami_id):
     # 指定されたKONAMI IDのデータだけをDBから全件取得
     records = JubeatHistory.query.filter_by(konami_id=konami_id).all()
+
+    # reverse=True を指定することで「最新日時が一番上（降順）」になります
+    records.sort(key=get_record_datetime, reverse=True)
     
     data = []
     for r in records:
@@ -84,15 +97,6 @@ def user_analytics_page(konami_id):
                 "average_score": round(statistics.mean(scores), 1),
                 "median_score": statistics.median(scores),
             }
-
-    # Python側で play_date を正しい日時にパースして最新順にソートする
-    # 0埋めがなくても、datetimeオブジェクトに変換されるため完璧にカレンダー順で並び替わります
-    def get_record_datetime(record):
-        try:
-            return datetime.strptime(record.date.strip(), '%Y/%m/%d %H:%M')
-        except ValueError:
-            # 万が一パースできない壊れた日付データがあった場合は、過去の固定日時を返して最下位にする
-            return datetime.min
 
     # reverse=True を指定することで「最新日時が一番上（降順）」になります
     target_records.sort(key=get_record_datetime, reverse=True)

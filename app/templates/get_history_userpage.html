@@ -17,6 +17,14 @@
         table { border-collapse: collapse; width: 100%; margin-top: 15px; background: white; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid #dee2e6; }
         th { background-color: #f1f3f5; }
+        .row-basic-normal    { background-color: #e8f5e9; color: #2d3748; }
+        .row-basic-hard      { background-color: #d4edda; color: #2d3748; border-bottom: 2px solid #28a745; }
+        .row-advanced-normal { background-color: #fffde7; color: #2d3748; }
+        .row-advanced-hard   { background-color: #fff3cd; color: #2d3748; border-bottom: 2px solid #ffc107; }
+        .row-extreme-normal  { background-color: #ffebee; color: #2d3748; }
+        .row-extreme-hard    { background-color: #f8d7da; color: #2d3748; border-bottom: 2px solid #dc3545; }
+        .ranking-table tr { transition: background 0.2s; }
+        .ranking-table td { padding: 12px 10px; border-bottom: 1px solid #dee2e6; }
     </style>
   </head>
   <body>
@@ -33,7 +41,7 @@
         <a href="/download/{{ current_user }}" class="btn btn-download">このデータのCSVをダウンロード</a>
 
         <h2>保存データプレビュー</h2>
-        <table>
+        <table class="ranking-table">
           <tr>
             <th>プレイ日時</th>
             <th>曲名</th>
@@ -42,12 +50,34 @@
             <th>ハードモード</th>
           </tr>
           {% for row in data %}
-            <tr>
-              <td>{{ row['プレイ日時'] }}</td>
-              <td>{{ row['曲名'] }}</td>
-              <td>{{ row['難易度'] }}</td>
-              <td>{{ row['スコア'] }}</td>
-              <td>{{ row['ハードモード'] }}</td>
+            {% if row['難易度'] == 'bsc' %}
+                {% if row['ハードモード'] == 1 or row['ハードモード'] == true %}{% set row_class = 'row-basic-hard' %}
+                {% else %}{% set row_class = 'row-basic-normal' %}{% endif %}
+            {% elif row['難易度'] == 'adv' %}
+                {% if row['ハードモード'] == 1 or row['ハードモード'] == true %}{% set row_class = 'row-advanced-hard' %}
+                {% else %}{% set row_class = 'row-advanced-normal' %}{% endif %}
+            {% elif row['難易度'] == 'ext' %}
+                {% if row['ハードモード'] == 1 or row['ハードモード'] == true %}{% set row_class = 'row-extreme-hard' %}
+                {% else %}{% set row_class = 'row-extreme-normal' %}{% endif %}
+            {% else %}
+                {% set row_class = '' %}
+            {% endif %}
+            <tr class="{{ row_class }}">
+                <td style="padding: 12px 10px; font-weight: bold;">{{ row['プレイ日時'] }}</td>
+                <td style="font-weight: bold;">{{ row['曲名'] }}</td>
+                <td style="font-weight: bold;">{{ row['難易度'] }}</td>
+                <td style="font-weight: bold;">{{ "{:,}".format(row['スコア']) if row['スコア'] is integer else row['スコア'] }}</td>
+                <td style="padding: 12px 10px; vertical-align: middle;">
+                    {% if row['ハードモード'] == 1 or row['ハードモード'] == true %}
+                        <span style="display: inline-block; background-color: #dc3545; color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.15);">
+                            ✓
+                        </span>
+                    {% else %}
+                        <span style="display: inline-block; background-color: #ffffff; color: #a0aec0; border: 1px solid #cbd5e0; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: bold;">
+                            
+                        </span>
+                    {% endif %}
+                </td>
             </tr>
           {% endfor %}
         </table>
