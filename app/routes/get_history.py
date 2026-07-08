@@ -315,19 +315,20 @@ def download_all():
     all_data = []
     for r in all_records:
         all_data.append({
-            "ユーザーID": r.user_id,
-            "KONAMI ID": r.konami_id,
-            "プレー日時": r.date,
-            "曲名": r.music_name,
-            "難易度": r.difficulty,
-            "スコア": r.score,
-            "ハードモード": r.is_hardmode,
-            "ライバル1_名前": r.rival1_name,
-            "ライバル1_スコア": r.rival1_score,
-            "ライバル2_名前": r.rival2_name,
-            "ライバル2_スコア": r.rival2_score,
-            "ライバル3_名前": r.rival3_name,
-            "ライバル3_スコア": r.rival3_score            
+            "id": r.id,
+            "user_id": r.user_id,
+            "konami_id": r.konami_id,
+            "date": r.date,
+            "music_name": r.music_name,
+            "difficulty": r.difficulty,
+            "score": r.score,
+            "is_hardmode": r.is_hardmode,
+            "rival1_name": r.rival1_name,
+            "rival1_score": r.rival1_score,
+            "rival2_name": r.rival2_name,
+            "rival2_score": r.rival2_score,
+            "rival3_name": r.rival3_name,
+            "rival3_score": r.rival3_score            
         })
         
     # 3. DataFrameに変換し、メモリ上でCSVを作成（Excel文字化け対策のBOM付きUTF-8）
