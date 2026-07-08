@@ -112,6 +112,72 @@ def user_analytics_page(konami_id):
         stats=stats
     )
 
+@userpage_bp.route('/user/<konami_id>/rival_data')
+def rival_data_page(konami_id):
+    # 1. 検索フォームから「対戦相手の名前（またはID）」を取得
+    vs_user_id = request.args.get('vs_user_id', '').strip()
+
+    # 自分の全プレイ履歴をデータベースから取得（既存通り）
+    records = JubeatHistory.query.filter_by(konami_id=konami_id).order_by(JubeatHistory.id.desc()).all()
+    
+    # プレビュー表示用データの整形（既存通り）
+    data = [{"曲名": r.music_name, "難易度": r.difficulty, "スコア": r.score, "is_hard": r.is_hardmode} for r in records]
+
+    # 💡 2. 新設：JubeatHistory内のrivalデータを用いた勝敗集計ロジック
+    match_data = []
+    win_count = 0
+    lose_count = 0
+    draw_count = 0
+
+    if vs_user_id:
+        for r in records:
+            # 各レコードの rival1 または rival2 または rival3 に指定した相手がいるかチェック
+            is_matched = False
+            vs_score = 0
+            
+            # モデルの属性名（rival1_name等）が実際のDBカラム名と一致しているか確認してください
+            if hasattr(r, 'rival1_name') and r.rival1_name == vs_user_id:
+                is_matched = True
+                vs_score = getattr(r, 'rival1_score', 0)
+            elif hasattr(r, 'rival2_name') and r.rival2_name == vs_user_id:
+                is_matched = True
+                vs_score = getattr(r, 'rival2_score', 0)
+            elif hasattr(r, 'rival3_name') and r.rival3_name == vs_user_id:
+                is_matched = True
+                vs_score = getattr(r, 'rival3_score', 0)
+                
+            # マッチングが見つかった場合、自分(r.score)と相手(vs_score)を比較
+            if is_matched and isinstance(r.score, int) and isinstance(vs_score, int):
+                if r.score > vs_score:
+                    result = "WIN"
+                    win_count += 1
+                elif r.score < vs_score:
+                    result = "LOSE"
+                    lose_count += 1
+                else:
+                    result = "DRAW"
+                    draw_count += 1
+
+                match_data.append({
+                    "music_name": r.music_name,
+                    "difficulty": r.difficulty,
+                    "is_hard": r.is_hardmode,
+                    "my_score": r.score,
+                    "vs_score": vs_score,
+                    "result": result,
+                    "match_date": getattr(r, 'date', '') # プレイ日時があれば取得
+                })
+
+    return render_template(
+        'rival_data.html',
+        current_user=konami_id,
+        vs_user_id=vs_user_id,
+        match_data=match_data,
+        win_count=win_count,
+        lose_count=lose_count,
+        draw_count=draw_count
+    )
+
 # 個別CSVダウンロード（URLのKONAMI IDを基準にする）
 @userpage_bp.route('/download/<konami_id>')
 def download_user_csv(konami_id):

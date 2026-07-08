@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ current_user }} さんのマッチングデータ</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background-color: #f8f9fa; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .btn { padding: 10px 15px; font-size: 15px; cursor: pointer; background-color: #007BFF; color: white; border: none; border-radius: 4px; font-weight: bold; text-decoration: none; display: inline-block; }
+        .card-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; margin-bottom: 30px; }
+        .card { background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 15px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .card-title { font-size: 13px; color: #6c757d; font-weight: bold; margin-bottom: 5px; }
+        .card-value { font-size: 22px; color: #2d3748; font-weight: bold; font-family: monospace; }
+        .form-box { background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; margin-bottom: 25px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 15px; background: white; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        th { background-color: #f1f3f5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>マッチングデータ統計</h1>
+        <p>
+            <a href="/user/{{ current_user }}" class="btn" style="background-color: #6c757d;">📋 マイページへ戻る</a>
+        </p>
+        {% if current_user %}
+            <div class="form-box" style="background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; margin-bottom: 25px;">
+                <h3>⚔️ 同時マッチング・ライバル戦績確認</h3>
+                <form action="/user/{{ current_user }}/rival_data" method="get" style="display: flex; gap: 10px; align-items: center;">
+                    <!-- 💡 プレースホルダーをプレイヤー名入力用に変更 -->
+                    <input type="text" name="vs_user_id" value="{{ vs_user_id }}" class="input-text" style="margin-bottom:0; width: 250px;" placeholder="ライバルのプレーヤー名を入力" required>
+                    <button type="submit" class="btn" style="background-color: #dc3545;">戦績を抽出</button>
+                    {% if vs_user_id %}
+                        <a href="/user/{{ current_user }}/rival_data" class="btn" style="background-color: #6c757d;">解除</a>
+                    {% endif %}
+                </form>
+
+                {% if vs_user_id and match_data %}
+                    <!-- 星取表（メーター表示） -->
+                    <div style="margin-top: 20px; padding: 15px; background: #f8d7da; border-radius: 6px; display: flex; justify-content: space-around; text-align: center;">
+                        <div>
+                            <span style="font-size: 14px; color: #721c24; font-weight: bold;">TOTAL MATCHES</span>
+                            <div style="font-size: 24px; font-weight: bold; color: #2d3748;">{{ win_count + lose_count + draw_count }}</div>
+                        </div>
+                        <div>
+                            <span style="font-size: 14px; color: #155724; font-weight: bold;">WIN</span>
+                            <div style="font-size: 24px; font-weight: bold; color: #28a745;">{{ win_count }}</div>
+                        </div>
+                        <div>
+                            <span style="font-size: 14px; color: #721c24; font-weight: bold;">LOSE</span>
+                            <div style="font-size: 24px; font-weight: bold; color: #dc3545;">{{ lose_count }}</div>
+                        </div>
+                        <div>
+                            <span style="font-size: 14px; color: #383d41; font-weight: bold;">DRAW</span>
+                            <div style="font-size: 24px; font-weight: bold; color: #6c757d;">{{ draw_count }}</div>
+                        </div>
+                    </div>
+
+                    <!-- マッチング楽曲ログ -->
+                    <h4 style="margin-top: 25px; margin-bottom: 10px;">📋 ライバルがいた楽曲履歴</h4>
+                    <table style="width: 100%; border-collapse: collapse; background: white;">
+                        <thead>
+                            <tr style="background: #f1f3f5;">
+                                <th>楽曲名 [難易度]</th>
+                                <th>自分のスコア</th>
+                                <th>相手のスコア</th>
+                                <th style="text-align: center;">結果</th>
+                                <th>プレイ日時</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in match_data %}
+                            <tr style="border-bottom: 1px solid #dee2e6;">
+                                <td style="padding: 10px;">
+                                    {{ m.music_name }} [{{ m.difficulty }}]
+                                    {% if m.is_hard %}<span style="color:red; font-size:11px; font-weight:bold;">(HARD)</span>{% endif %}
+                                </td>
+                                <td style="padding: 10px; font-family: monospace;">{{ "{:,}".format(m.my_score) }}</td>
+                                <td style="padding: 10px; font-family: monospace;">{{ "{:,}".format(m.vs_score) }}</td>
+                                <td style="padding: 10px; text-align: center; font-weight: bold;">
+                                    {% if m.result == 'WIN' %}
+                                        <span style="color: #28a745; background: #e2f0d9; padding: 2px 8px; border-radius: 4px;">👑 WIN</span>
+                                    {% elif m.result == 'LOSE' %}
+                                        <span style="color: #dc3545; background: #fce4d6; padding: 2px 8px; border-radius: 4px;">LOSE</span>
+                                    {% else %}
+                                        <span style="color: #6c757d; background: #e2e3e5; padding: 2px 8px; border-radius: 4px;">DRAW</span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 10px; color: #6c757d; font-size: 13px;">{{ m.match_date }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% elif vs_user_id %}
+                    <p style="color: #6c757d; margin-top: 15px;">⚠️ このマイページ内に、入力されたライバル名とのマッチング履歴は見つかりませんでした。</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
