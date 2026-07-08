@@ -14,8 +14,8 @@ from app.routes.userpage import userpage_bp
 app = Flask(__name__)
 app.register_blueprint(static.app)
 
-# ★重要★ すべてのドメイン（e-amusement側）からのデータ受信を許可する設定
-CORS(app)
+# ★重要★ コナミ公式ドメインからの通信だけを許可する
+CORS(app, origins=["https://p.eagate.573.jp"])
 
 # 設定の読み込み
 app.config.from_object(Config)

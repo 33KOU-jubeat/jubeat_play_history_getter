@@ -69,13 +69,13 @@
               <td>{{ history_data.music_title }}</td>
               <td>{{ history_data.difficulty }}</td>
               <td>{{ history_data.score }}</td>
-              <td>{{ history_data.hardmode }}</td>
+              <td>{% if history_data.hardmode == 1 %} ✓ {% endif %}</td>
               <td>{{ history_data.rival1_name }}</td>
-              <td>{{ history_data.rival1_score }}</td>
+              <td>{% if history_data.rival1_name %} {{ history_data.rival1_score }} {% endif %}</td>
               <td>{{ history_data.rival2_name }}</td>
-              <td>{{ history_data.rival2_score }}</td>
+              <td>{% if history_data.rival2_name %} {{ history_data.rival2_score }} {% endif %}</td>
               <td>{{ history_data.rival3_name }}</td>
-              <td>{{ history_data.rival3_score }}</td>
+              <td>{% if history_data.rival3_name %} {{ history_data.rival3_score }} {% endif %}</td>
             </tr>
           {% endfor %}
         </tbody>

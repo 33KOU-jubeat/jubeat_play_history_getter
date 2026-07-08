@@ -120,8 +120,8 @@ def rival_data_page(konami_id):
     # 自分の全プレイ履歴をデータベースから取得（既存通り）
     records = JubeatHistory.query.filter_by(konami_id=konami_id).order_by(JubeatHistory.id.desc()).all()
     
-    # プレビュー表示用データの整形（既存通り）
-    data = [{"曲名": r.music_name, "難易度": r.difficulty, "スコア": r.score, "is_hard": r.is_hardmode} for r in records]
+    # reverse=True を指定することで「最新日時が一番上（降順）」になります
+    records.sort(key=get_record_datetime, reverse=True)
 
     # 💡 2. 新設：JubeatHistory内のrivalデータを用いた勝敗集計ロジック
     match_data = []
