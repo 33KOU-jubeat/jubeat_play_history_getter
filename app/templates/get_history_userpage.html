@@ -64,7 +64,14 @@
             {% endif %}
             <tr class="{{ row_class }}">
                 <td style="padding: 12px 10px; font-weight: bold;">{{ row['プレイ日時'] }}</td>
-                <td style="font-weight: bold;">{{ row['曲名'] }}</td>
+                <td style="font-weight: bold;">
+                  <a href="/user/{{ current_user }}/analytics?music_name={{ row['曲名'] | urlencode }}&difficulty={{ row['難易度'] | urlencode }}&is_hard={{ row['ハードモード'] | urlencode }}" 
+                    style="color: #007BFF; text-decoration: none; font-weight: bold; border-bottom: 1px dashed #007BFF;"
+                    onmouseover="this.style.color='#0056b3';" 
+                    onmouseout="this.style.color='#007BFF';">
+                      {{ row['曲名'] }}
+                  </a>
+                </td>
                 <td style="font-weight: bold;">{{ row['難易度'] }}</td>
                 <td style="font-weight: bold;">{{ "{:,}".format(row['スコア']) if row['スコア'] is integer else row['スコア'] }}</td>
                 <td style="padding: 12px 10px; vertical-align: middle;">
