@@ -84,7 +84,7 @@
                     <div style="background: #edf2f7; padding: 4px; border-radius: 6px; display: flex; gap: 5px;">
                         {% if sort_by == 'play_date' %}
                             <!-- 更新日時順ボタン -->
-                            <a href="/ranking_scraping?search_player={{ search_player }}&search_music={{ search_music }}&search_date={{ search_date }}&sort_by=play_date" 
+                            <a href="/ranking_scraping?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=play_date" 
                             class="btn" 
                             style="padding: 6px 12px; font-size: 13px; border-radius: 4px;
                             background-color: white; color: #2d3748; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: bold;">
@@ -92,7 +92,7 @@
                             </a>
 
                             <!-- マスターID順ボタン -->
-                            <a href="/ranking_scraping?search_player={{ search_player }}&search_music={{ search_music }}&search_date={{ search_date }}&sort_by=master_id" 
+                            <a href="/ranking_scraping?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=master_id" 
                             class="btn" 
                             style="padding: 6px 12px; font-size: 13px; border-radius: 4px;
                             background-color: transparent; color: #718096;">
@@ -100,7 +100,7 @@
                             </a>
                         {% else %}
                             <!-- 更新日時順ボタン -->
-                            <a href="/ranking_scraping?search_player={{ search_player }}&search_music={{ search_music }}&search_date={{ search_date }}&sort_by=play_date" 
+                            <a href="/ranking_scraping?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=play_date" 
                             class="btn" 
                             style="padding: 6px 12px; font-size: 13px; border-radius: 4px;
                             background-color: transparent; color: #718096;">
@@ -108,7 +108,7 @@
                             </a>
 
                             <!-- マスターID順ボタン -->
-                            <a href="/ranking_scraping?search_player={{ search_player }}&search_music={{ search_music }}&search_date={{ search_date }}&sort_by=master_id" 
+                            <a href="/ranking_scraping?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=master_id" 
                             class="btn" 
                             style="padding: 6px 12px; font-size: 13px; border-radius: 4px;
                             background-color: white; color: #2d3748; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: bold;">
@@ -136,7 +136,14 @@
                         <tbody>
                             {% for r in records %}
                             <tr>
-                                <td style="color: #2b6cb0;">{{ r.player_name }}</td>
+                                <td style="color: #2b6cb0;">
+                                    <a href="/ranking_scraping?search_player={{ r.player_name | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by={{ sort_by | urlencode }}" 
+                                    style="color: #007BFF; text-decoration: none; font-weight: bold; border-bottom: 1px dashed #007BFF;"
+                                    onmouseover="this.style.color='#0056b3';" 
+                                    onmouseout="this.style.color='#007BFF';">
+                                        {{ r.player_name }}
+                                    </a>
+                                </td>
                                 <td style="font-family: monospace;">{{ "{:,}".format(r.score) }}</td>
                                 <td style="color: #718096; font-size: 14px;">{{ r.play_date }}</td>
                             </tr>
