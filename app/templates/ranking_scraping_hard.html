@@ -21,26 +21,27 @@
     <div class="container">
         <h1>jubeat 大会対策用ランキング一括表示(仮)</h1>
         <div style="display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #cbd5e0; padding-bottom: 0;">
+            <!-- 🟢 通常モード用タブ -->
             <a href="/ranking_scraping/normal?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date }}&sort_by={{ sort_by }}" 
                 style="padding: 10px 20px; text-decoration: none; font-weight: bold; font-size: 16px; border-radius: 6px 6px 0 0; margin-bottom: -2px; transition: all 0.2s;
-                background-color: #28a745; color: white; border: 2px solid #28a745; border-bottom: none;">
+                background-color: transparent; color: #4a5568;">
                 🟢 通常モード ランキング
             </a>
 
             <!-- 🔴 ハードモード用タブ -->
             <a href="/ranking_scraping/hard?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date }}&sort_by={{ sort_by }}" 
                 style="padding: 10px 20px; text-decoration: none; font-weight: bold; font-size: 16px; border-radius: 6px 6px 0 0; margin-bottom: -2px; transition: all 0.2s;
-                background-color: transparent; color: #4a5568;">
+                background-color: #dc3545; color: white; border: 2px solid #dc3545; border-bottom: none;">
                 🔴 ハードモード ランキング
             </a>
         </div>
         <p>※現在の表示範囲:Beyond Limits対象譜面(101譜面)</p>
         <!-- 一括更新トリガーボタンのエリア -->
         <div style="margin-bottom: 30px;">
-            <form action="/trigger_scraping_normal" method="post">
+            <form action="/trigger_scraping_hard" method="post">
                 <!-- 💡 実行中はボタンを押せない（無効化）ようにする -->
                 <button type="submit" class="btn" {% if status.is_running %}disabled style="background-color: #6c757d; cursor: not-allowed;"{% endif %}>
-                    {% if status.is_running %}🔄 現在裏で自動巡回中...{% else %}🔄 通常モード用データベースの全楽曲ランキングを一括更新(約2分かかります){% endif %}
+                    {% if status.is_running %}🔄 現在裏で自動巡回中...{% else %}🔄 ハードモード用データベースの全楽曲ランキングを一括更新(約10分かかります){% endif %}
                 </button>
             </form>
             <p style="color: #28a745; font-weight: bold; margin-top: 10px;">※ 最終更新日時:{{ update_date }}</p>
@@ -65,7 +66,7 @@
         <!-- ランキング絞り込み検索フォーム -->
         <div style="background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
             <h3 style="margin-top: 0; color: #4a5568;">🔍 ランキング表示の絞り込み</h3>
-            <form action="/ranking_scraping/normal" method="get" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+            <form action="/ranking_scraping/hard" method="get" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
                 
                 <!-- プレーヤー名検索 -->
                 <div style="flex: 1; min-width: 200px;">
@@ -92,28 +93,30 @@
                         <!-- 現在のソート順の状態を検索時にも維持させるための隠しパラメータ -->
                         <input type="hidden" name="sort_by" value="{{ sort_by }}">
                         <button type="submit" class="btn" style="background-color: #007BFF; padding: 9px 20px;">検索・絞り込み</button>
-                        <a href="/ranking_scraping/normal" class="btn" style="background-color: #e2e8f0; color: #4a5568; padding: 9px 20px;">リセット</a>
+                        <a href="/ranking_scraping/hard" class="btn" style="background-color: #e2e8f0; color: #4a5568; padding: 9px 20px;">リセット</a>
                     </div>
 
                     <!-- ソート順切り替えトグルスイッチ風リンク -->
                     <div style="background: #edf2f7; padding: 4px; border-radius: 6px; display: flex; gap: 5px;">
                         {% if sort_by == 'play_date' %}
                             <!-- 更新日時順ボタン -->
-                            <a href="/ranking_scraping/normal?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=play_date" 
+                            <a href="/ranking_scraping/hard?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=play_date" 
                             class="btn" 
                             style="padding: 6px 12px; font-size: 13px; border-radius: 4px;
                             background-color: white; color: #2d3748; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: bold;">
                                 🕒 更新日時順
                             </a>
+
                             <!-- 1位スコア順ボタン（新設） -->
-                            <a href="/ranking_scraping/normal?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date }}&sort_by=top_score" 
+                            <a href="/ranking_scraping/hard?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date }}&sort_by=top_score" 
                             class="btn" 
                             style="padding: 6px 12px; font-size: 13px; border-radius: 4px; transition: all 0.2s;
                             background-color: transparent; color: #718096;">
                                 🏆 1位スコア順
                             </a>
+
                             <!-- マスターID順ボタン -->
-                            <a href="/ranking_scraping/normal?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=master_id" 
+                            <a href="/ranking_scraping/hard?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=master_id" 
                             class="btn" 
                             style="padding: 6px 12px; font-size: 13px; border-radius: 4px;
                             background-color: transparent; color: #718096;">
@@ -121,7 +124,7 @@
                             </a>
                         {% elif sort_by == 'top_score' %}
                             <!-- 更新日時順ボタン -->
-                            <a href="/ranking_scraping/normal?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=play_date" 
+                            <a href="/ranking_scraping/hard?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=play_date" 
                             class="btn" 
                             style="padding: 6px 12px; font-size: 13px; border-radius: 4px;
                             background-color: transparent; color: #718096;">
@@ -129,7 +132,7 @@
                             </a>
 
                             <!-- 1位スコア順ボタン（新設） -->
-                            <a href="/ranking_scraping/normal?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date }}&sort_by=top_score" 
+                            <a href="/ranking_scraping/hard?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date }}&sort_by=top_score" 
                             class="btn" 
                             style="padding: 6px 12px; font-size: 13px; border-radius: 4px; transition: all 0.2s;
                             background-color: white; color: #2d3748; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: bold;">
@@ -137,7 +140,7 @@
                             </a>
 
                             <!-- マスターID順ボタン -->
-                            <a href="/ranking_scraping/normal?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=master_id" 
+                            <a href="/ranking_scraping/hard?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=master_id" 
                             class="btn" 
                             style="padding: 6px 12px; font-size: 13px; border-radius: 4px;
                             background-color: transparent; color: #718096;">
@@ -145,21 +148,23 @@
                             </a>
                         {% else %}
                             <!-- 更新日時順ボタン -->
-                            <a href="/ranking_scraping/normal?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=play_date" 
+                            <a href="/ranking_scraping/hard?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=play_date" 
                             class="btn" 
                             style="padding: 6px 12px; font-size: 13px; border-radius: 4px;
                             background-color: transparent; color: #718096;">
                                 🕒 更新日時順
                             </a>
+
                             <!-- 1位スコア順ボタン（新設） -->
-                            <a href="/ranking_scraping/normal?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date }}&sort_by=top_score" 
+                            <a href="/ranking_scraping/hard?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date }}&sort_by=top_score" 
                             class="btn" 
                             style="padding: 6px 12px; font-size: 13px; border-radius: 4px; transition: all 0.2s;
                             background-color: transparent; color: #718096;">
                                 🏆 1位スコア順
                             </a>
+
                             <!-- マスターID順ボタン -->
-                            <a href="/ranking_scraping/normal?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=master_id" 
+                            <a href="/ranking_scraping/hard?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by=master_id" 
                             class="btn" 
                             style="padding: 6px 12px; font-size: 13px; border-radius: 4px;
                             background-color: white; color: #2d3748; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: bold;">
@@ -199,7 +204,7 @@
                             {% for r in records %}
                             <tr>
                                 <td style="color: #2b6cb0;">
-                                    <a href="/ranking_scraping/normal?search_player={{ r.player_name | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by={{ sort_by | urlencode }}" 
+                                    <a href="/ranking_scraping/hard?search_player={{ r.player_name | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date | urlencode }}&sort_by={{ sort_by | urlencode }}" 
                                     style="color: #007BFF; text-decoration: none; font-weight: bold; border-bottom: 1px dashed #007BFF;"
                                     onmouseover="this.style.color='#0056b3';" 
                                     onmouseout="this.style.color='#007BFF';">
