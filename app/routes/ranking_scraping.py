@@ -528,5 +528,5 @@ def trigger_scraping_hard():
     thread.start() # 裏で実行開始！
     
     # 30秒を待たずに、一瞬でユーザー画面をリフレッシュする
-    flash("楽曲ランキングの一括更新をバックグラウンドで開始しました。完了まで約10分かかります。ページを再読み込みして進捗を確認してください。")
+    flash("楽曲ランキングの一括更新をバックグラウンドで開始しました。完了まで約20分かかります。ページを再読み込みして進捗を確認してください。")
     return redirect(url_for('ranking_scraping.ranking_scraping', mode='hard'))

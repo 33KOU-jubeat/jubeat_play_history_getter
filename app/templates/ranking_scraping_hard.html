@@ -41,7 +41,7 @@
             <form action="/trigger_scraping_hard" method="post">
                 <!-- 💡 実行中はボタンを押せない（無効化）ようにする -->
                 <button type="submit" class="btn" {% if status.is_running %}disabled style="background-color: #6c757d; cursor: not-allowed;"{% endif %}>
-                    {% if status.is_running %}🔄 現在裏で自動巡回中...{% else %}🔄 ハードモード用データベースの全楽曲ランキングを一括更新(約10分かかります){% endif %}
+                    {% if status.is_running %}🔄 現在裏で自動巡回中...{% else %}🔄 ハードモード用データベースの全楽曲ランキングを一括更新(約20分かかります){% endif %}
                 </button>
             </form>
             <p style="color: #28a745; font-weight: bold; margin-top: 10px;">※ 最終更新日時:{{ update_date }}</p>
