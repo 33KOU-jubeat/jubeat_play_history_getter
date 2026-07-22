@@ -441,7 +441,7 @@ def ranking_scraping(mode):
     )
 
 # ボタンクリックでマスターに登録された全楽曲を自動巡回する処理
-@ranking_scraping_bp.route('/trigger_scraping_normal', methods=['POST'])
+@ranking_scraping_bp.route('/trigger_scraping_normal', methods=['GET', 'POST'])
 def trigger_scraping_normal():
     
     utc_now = datetime.now(timezone.utc)
@@ -463,11 +463,16 @@ def trigger_scraping_normal():
     
     # すでに裏で実行中の場合は二重起動を防ぐ
     if SCRAPING_STATUS["is_running"]:
+        # 外部サービスからのアクセス時はリダイレクトさせず、文字を返す（エラー防止）
+        if request.method == 'GET':
+            return "Already running", 200
         flash("現在、すでに一括更新がバックグラウンドで実行中です。しばらくお待ちください。")
         return redirect(url_for('ranking_scraping.ranking_scraping', mode='normal'))
         
     masters = JubeatMusicMaster.query.all()
     if not masters:
+        if request.method == 'GET':
+            return "No master data", 400
         flash("楽曲マスターに曲が登録されていません。")
         return redirect(url_for('ranking_scraping.ranking_scraping', mode='normal'))
         
@@ -480,6 +485,9 @@ def trigger_scraping_normal():
         args=(app_context, masters, "normal")
     )
     thread.start() # 裏で実行開始！
+
+    if request.method == 'GET':
+        return "Scrawling started successfully", 200
     
     # 30秒を待たずに、一瞬でユーザー画面をリフレッシュする
     flash("楽曲ランキングの一括更新をバックグラウンドで開始しました。完了まで約2分かかります。ページを再読み込みして進捗を確認してください。")
@@ -487,7 +495,7 @@ def trigger_scraping_normal():
 
 
 # ボタンクリックでマスターに登録された全楽曲を自動巡回する処理
-@ranking_scraping_bp.route('/trigger_scraping_hard', methods=['POST'])
+@ranking_scraping_bp.route('/trigger_scraping_hard', methods=['GET', 'POST'])
 def trigger_scraping_hard():
     
     utc_now = datetime.now(timezone.utc)
@@ -509,11 +517,16 @@ def trigger_scraping_hard():
     
     # すでに裏で実行中の場合は二重起動を防ぐ
     if SCRAPING_STATUS["is_running"]:
+        # 外部サービスからのアクセス時はリダイレクトさせず、文字を返す（エラー防止）
+        if request.method == 'GET':
+            return "Already running", 200
         flash("現在、すでに一括更新がバックグラウンドで実行中です。しばらくお待ちください。")
         return redirect(url_for('ranking_scraping.ranking_scraping', mode='hard'))
         
     masters = JubeatMusicMaster.query.all()
     if not masters:
+        if request.method == 'GET':
+            return "No master data", 400
         flash("楽曲マスターに曲が登録されていません。")
         return redirect(url_for('ranking_scraping.ranking_scraping', mode='hard'))
         
@@ -526,6 +539,9 @@ def trigger_scraping_hard():
         args=(app_context, masters, "hard")
     )
     thread.start() # 裏で実行開始！
+
+    if request.method == 'GET':
+        return "Scrawling started successfully", 200
     
     # 30秒を待たずに、一瞬でユーザー画面をリフレッシュする
     flash("楽曲ランキングの一括更新をバックグラウンドで開始しました。完了まで約20分かかります。ページを再読み込みして進捗を確認してください。")
