@@ -7,6 +7,7 @@ from app.database import db, JubeatMusicMaster
 from app.config import Config
 # 分割したBlueprintをインポート
 from app.routes.ranking_scraping import ranking_scraping_bp
+from app.routes.ranking_analytics import ranking_analytics_bp
 from app.routes.admin import admin_bp
 from app.routes.get_history import get_history_bp
 from app.routes.userpage import userpage_bp
@@ -25,6 +26,7 @@ db.init_app(app)
 
 # 各Blueprintをアプリに登録
 app.register_blueprint(ranking_scraping_bp)
+app.register_blueprint(ranking_analytics_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(get_history_bp)
 app.register_blueprint(userpage_bp)
@@ -35,6 +37,5 @@ with app.app_context():
      # テスト用初期データ（空の場合のみ追加）
     if not JubeatMusicMaster.query.first():
         sample1 = JubeatMusicMaster(music_id="96209810", seq_id=2, comment="I")
-        sample2 = JubeatMusicMaster(music_id="69014196", seq_id=2, comment="[]DENTITY")
-        db.session.add_all([sample1, sample2])
+        db.session.add_all([sample1])
         db.session.commit()

@@ -19,6 +19,11 @@ ranking_scraping_bp = Blueprint('ranking_scraping', __name__)
 
 # 自作サイトのボタンから直接コナミのサイトを叩いてスクレイピングする関数
 def fetch_and_save_ranking(music_id, seq_id):
+    utc_now = datetime.now(timezone.utc)
+    jst_zone = timezone(timedelta(hours=9))
+    jst_now = utc_now.astimezone(jst_zone)
+    # サーバーがUTCであっても、この段階で「2026/07/02 14:36」という純粋な文字に固定します
+    jst_now_str = jst_now.strftime('%Y/%m/%d %H:%M')
     # 1. 楽曲ID(mid)と難易度(seq)を組み合わせて公式のURLを生成
     url = f"https://p.eagate.573.jp/game/jubeat/beyond/ranking/best_score.html?mid={music_id}&seq={seq_id}"
     
@@ -84,7 +89,15 @@ def fetch_and_save_ranking(music_id, seq_id):
                 return False, "ランキングデータが見つかりませんでした。HTMLの構造が変更された可能性があります。"
 
             # 5. 重複防止：同一曲名・難易度の古いランキングを一旦削除
-            JubeatRanking.query.filter_by(music_name=save_title).delete()
+            for item in ranking_list:
+                existing = JubeatRanking.query.filter_by(
+                    music_name=save_title, 
+                    player_name=item["player_name"], 
+                    score=item['score'], 
+                    play_date=item['play_date']
+                ).first()
+                if existing:
+                    db.session.delete(existing)
             
             # 6. 新しい上位20件をDBにコミット
             for item in ranking_list:
@@ -92,7 +105,8 @@ def fetch_and_save_ranking(music_id, seq_id):
                     music_name=save_title,
                     player_name=item['player_name'],
                     score=item['score'],
-                    play_date=item['play_date']
+                    play_date=item['play_date'],
+                    updated_at=jst_now_str
                 )
                 db.session.add(new_rank)
                 
@@ -105,6 +119,11 @@ def fetch_and_save_ranking(music_id, seq_id):
 
 # 自作サイトのボタンから直接コナミのサイトを叩いてスクレイピングする関数(ハードモード用)
 def fetch_and_save_ranking_hard(music_id, seq_id):
+    utc_now = datetime.now(timezone.utc)
+    jst_zone = timezone(timedelta(hours=9))
+    jst_now = utc_now.astimezone(jst_zone)
+    # サーバーがUTCであっても、この段階で「2026/07/02 14:36」という純粋な文字に固定します
+    jst_now_str = jst_now.strftime('%Y/%m/%d %H:%M')
     try:
         ranking_list = []
         for number in range(5):
@@ -191,8 +210,16 @@ def fetch_and_save_ranking_hard(music_id, seq_id):
         # 3. 最終的なリストを、重複が消えた新しいリストに置き換える
         ranking_list = unique_ranking_list
 
-        # 5. 重複防止：同一曲名・難易度の古いランキングを一旦削除
-        JubeatRankingHard.query.filter_by(music_name=save_title).delete()
+        # 5. 重複防止：同一曲名・難易度、同一プレーヤー名、同一スコア、同一プレー日時の古いランキングを削除
+        for item in ranking_list:
+            existing = JubeatRankingHard.query.filter_by(
+                music_name=save_title, 
+                player_name=item["player_name"], 
+                score=item['score'], 
+                play_date=item['play_date']
+            ).first()
+            if existing:
+                db.session.delete(existing)
             
         # 6. 新しい上位100件をDBにコミット
         for item in ranking_list:
@@ -200,7 +227,8 @@ def fetch_and_save_ranking_hard(music_id, seq_id):
                 music_name=save_title,
                 player_name=item['player_name'],
                 score=item['score'],
-                play_date=item['play_date']
+                play_date=item['play_date'],
+                updated_at=jst_now_str
             )
             db.session.add(new_rank)
                 
@@ -277,8 +305,16 @@ def ranking_scraping(mode):
     # 一旦データベースから全件取得（ここではまだ並び替えない）
     all_rankings = query.all()
 
-    # 2.【日付エラー解決策】Python側で確実な日付オブジェクト比較を行う
-    filtered_rankings = []
+    latest_times = {}
+    for r in all_rankings:
+        if r.music_name not in latest_times:
+            latest_times[r.music_name] = r.updated_at
+        else:
+            if r.updated_at > latest_times[r.music_name]:
+                latest_times[r.music_name] = r.updated_at
+
+    # 最新日時に一致するレコードだけを filtered_rankings に残す
+    filtered_rankings = [r for r in all_rankings if latest_times.get(r.music_name) == r.updated_at]
     
     if search_date:
         try:

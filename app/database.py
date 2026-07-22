@@ -33,6 +33,7 @@ class JubeatRanking(db.Model):
     player_name = db.Column(db.String(100), nullable=False)
     score = db.Column(db.Integer, nullable=False)
     play_date = db.Column(db.String(50), nullable=False)
+    updated_at = db.Column(db.String(50), nullable=False, default="")
 
 # ランキング結果保存用テーブル(ハードモード用)
 class JubeatRankingHard(db.Model):
@@ -41,6 +42,7 @@ class JubeatRankingHard(db.Model):
     player_name = db.Column(db.String(100), nullable=False)
     score = db.Column(db.Integer, nullable=False)
     play_date = db.Column(db.String(50), nullable=False)
+    updated_at = db.Column(db.String(50), nullable=False, default="")
 
 # ランキング結果最終更新日時格納用テーブル
 class RankingUpdate(db.Model):

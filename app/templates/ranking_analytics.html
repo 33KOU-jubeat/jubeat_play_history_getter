@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ランクイン回数・更新分析</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background-color: #f8f9fa; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .btn { padding: 10px 15px; font-size: 15px; cursor: pointer; background-color: #007BFF; color: white; border: none; border-radius: 4px; font-weight: bold; text-decoration: none; }
+        .form-box { background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; margin-bottom: 25px; }
+        .input-text { padding: 8px; font-size: 15px; border: 1px solid #cbd5e0; border-radius: 4px; margin-right: 10px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 15px; background: white; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        th { background-color: #f1f3f5; }
+        .count-badge { background-color: #e6fffa; color: #234e52; padding: 4px 10px; border-radius: 12px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 プレイヤー別 ランクイン回数集計</h1>
+        <p><a href="/ranking_scraping/normal" class="btn" style="background-color: #6c757d;">📋 メインランキングへ戻る</a></p>
+
+        <!-- 検索フォーム -->
+        <div class="form-box">
+            <form action="/ranking_scraping/normal/ranking_analytics" method="get" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+                <div>
+                    <label style="font-size: 14px; font-weight: bold;">👥 プレイヤー名（完全一致）：</label><br>
+                    <input type="text" name="player_name" value="{{ target_player }}" class="input-text" placeholder="正確な名義を入力" required>
+                </div>
+                <div>
+                    <label style="font-size: 14px; font-weight: bold;">📅 開始日：</label><br>
+                    <input type="date" name="start_date" value="{{ start_date }}" class="input-text">
+                </div>
+                <div>
+                    <label style="font-size: 14px; font-weight: bold;">📅 終了日：</label><br>
+                    <input type="date" name="end_date" value="{{ end_date }}" class="input-text">
+                </div>
+                <button type="submit" class="btn">集計を実行</button>
+            </form>
+        </div>
+
+        <!-- 集計結果表示 -->
+        {% if target_player %}
+            <h2>「<span style="color:#007BFF;">{{ target_player }}</span>」の集計結果</h2>
+            {% if analysis_data %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50%;">楽曲名 [難易度] (モード)</th>
+                            <th style="text-align: center; width: 20%;">総ランクイン回数</th>
+                            <th style="width: 30%;">プレイ日時一覧（最新順）</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in analysis_data %}
+                        <tr style="vertical-align: top;">
+                            <!-- 楽曲名 -->
+                            <td style="padding: 12px;"><strong>{{ row.music_name }}</strong></td>
+                            
+                            <!-- 回数バッジ -->
+                            <td style="text-align: center; padding: 12px;">
+                                <span class="count-badge">{{ row.count }} 回</span>
+                            </td>
+                            
+                            <!-- 💡 修正：すべてのプレイ日時をループで全件表示 -->
+                            <td style="padding: 12px; font-family: monospace; font-size: 14px; color: #4a5568;">
+                                <div style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
+                                    {% for date in row.play_dates %}
+                                        <div style="background: #f7fafc; padding: 2px 6px; border-radius: 3px; border-left: 3px solid #4a5568;">
+                                            📅 {{ date }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p style="color: #666;">指定された期間内に、このプレイヤーのランクイン履歴データはありませんでした。</p>
+            {% endif %}
+        {% endif %}
+    </div>
+</body>
+</html>
