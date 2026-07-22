@@ -305,6 +305,7 @@ def ranking_scraping(mode):
     # 一旦データベースから全件取得（ここではまだ並び替えない）
     all_rankings = query.all()
 
+    filtered_rankings = []
     latest_times = {}
     for r in all_rankings:
         if r.music_name not in latest_times:
@@ -313,15 +314,15 @@ def ranking_scraping(mode):
             if r.updated_at > latest_times[r.music_name]:
                 latest_times[r.music_name] = r.updated_at
 
-    # 最新日時に一致するレコードだけを filtered_rankings に残す
-    filtered_rankings = [r for r in all_rankings if latest_times.get(r.music_name) == r.updated_at]
+    # 最新日時に一致するレコードだけを latest_rankings に残す
+    latest_rankings = [r for r in all_rankings if latest_times.get(r.music_name) == r.updated_at]
     
     if search_date:
         try:
             # 検索フォームの入力（'2026-06-01T00:00'）を基準となる日付オブジェクトに変換
             target_dt = datetime.strptime(search_date, '%Y-%m-%dT%H:%M')
             
-            for r in all_rankings:
+            for r in latest_rankings:
                 # データベース内の文字列（'2026/2/2 15:30' や '2026/05/10 09:00'）をパース
                 # 公式サイトの「月」や「日」が1桁（スペースや0埋めなし）の場合でも柔軟に対応できる正規表現的パース
                 # スラッシュやスペースの表記の揺れを考慮して変換します
@@ -337,10 +338,10 @@ def ranking_scraping(mode):
                     continue
         except ValueError:
             # 検索日時のパース自体に失敗した場合は、フィルターなし（全件）にする
-            filtered_rankings = all_rankings
+            filtered_rankings = latest_rankings
     else:
         # 日時検索が空の場合はそのまま全件を使用
-        filtered_rankings = all_rankings
+        filtered_rankings = latest_rankings
 
     # Python側で play_date を正しい日時にパースして最新順にソートする
     # 0埋めがなくても、datetimeオブジェクトに変換されるため完璧にカレンダー順で並び替わります

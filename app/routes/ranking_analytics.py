@@ -16,8 +16,14 @@ def ranking_analytics():
     start_date_form = request.args.get('start_date', '').strip() # 'YYYY-MM-DD'
     end_date_form = request.args.get('end_date', '').strip()     # 'YYYY-MM-DD'
     # 表記が '2026/2/2 15:30' でも '2026/02/02 15:30' でも正しく解釈されます
-    start_date = datetime.strptime(start_date_form, '%Y/%m/%d')
-    end_date = datetime.strptime(end_date_form, '%Y/%m/%d')
+    if start_date_form != '':
+        start_date = datetime.strptime(start_date_form, '%Y-%m-%d')
+    else:
+        start_date = ''
+    if end_date_form != '':
+        end_date = datetime.strptime(end_date_form, '%Y-%m-%d')
+    else:
+        end_date = ''
 
     analysis_data = []
 
@@ -29,7 +35,7 @@ def ranking_analytics():
         music_logs = {}
         for r in records:
             # play_date ("2026/07/01 15:30") の日付部分を比較用に成形
-            rec_date = datetime.strptime(r.play_date.strip(), '%Y/%m/%d')
+            rec_date = datetime.strptime(r.play_date.split(" ")[0], '%Y/%m/%d')
             
             if start_date and rec_date < start_date:
                 continue
@@ -61,6 +67,6 @@ def ranking_analytics():
         'ranking_analytics.html',
         analysis_data=analysis_data,
         target_player=target_player,
-        start_date=start_date,
-        end_date=end_date
+        start_date=start_date_form,
+        end_date=end_date_form
     )

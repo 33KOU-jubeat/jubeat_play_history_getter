@@ -63,7 +63,7 @@
             {% endwith %}
         </div>
         <p>
-            <a href="/ranking_scraping/normal/ranking_analytics" class="btn" style="background-color: #17a2b8;">📊 ランクイン回数・更新分析ページを開く</a>
+            <a href="/ranking_scraping/normal/ranking_analytics?player_name={{ search_player | urlencode }}" class="btn" style="background-color: #17a2b8;">📊 ランクイン回数・更新分析ページを開く</a>
         </p>
         <!-- ランキング絞り込み検索フォーム -->
         <div style="background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
@@ -249,8 +249,6 @@
         {% endif %}
     </div>
     <p style="color: #28a745; font-weight: bold; margin-top: 10px;">今後の追加予定機能</p>
-    <p>定期自動更新機能</p>
-    <p>エクセ履歴、回数記録</p>
     <p>対象楽曲変更機能</p>
 </body>
 </html>
