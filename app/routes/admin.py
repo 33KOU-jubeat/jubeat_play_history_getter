@@ -33,6 +33,7 @@ def admin_page():
                 
             success_count = 0
             
+            insert_data_list = []
             # 4. 1行ずつデータをチェックしてDBに登録
             for _, row in df.iterrows():
                 mid = str(row['music_id']).strip()
@@ -45,18 +46,22 @@ def admin_page():
                 # すでに全く同じmusic_idとseq_idの組み合わせが登録されているかチェック
                 exists = JubeatMusicMaster.query.filter_by(music_id=mid, seq_id=seq).first()
                 if not exists:
-                    new_music = JubeatMusicMaster(
-                        music_id=mid, 
-                        seq_id=seq, 
-                        name=name,
-                        level=lvl,
-                        is_beyond_limits=bl,
-                        comment=comm
-                    )
-                    db.session.add(new_music)
+                    # 407件分のデータをメモリ上のリストにすべて格納
+                    insert_data_list.append({
+                        "music_id": mid,
+                        "seq_id": seq,
+                        "name": name,
+                        "level": lvl,
+                        "is_beyond_limits": bl,
+                        "comm": comm
+                    })
                     success_count += 1
             
-            db.session.commit()
+            chunk_size = 100
+            for i in range(0, len(insert_data_list), chunk_size):
+                chunk = insert_data_list[i:i + chunk_size]
+                db.session.bulk_insert_mappings(JubeatMusicMaster, chunk)
+                db.session.commit()  # チャンクごとに即座に確定させて通信を終わらせる
             flash(f"CSVから新たに {success_count} 件の楽曲をマスターに登録しました！", "success")
             
         except Exception as e:
