@@ -22,9 +22,12 @@ class JubeatHistory(db.Model):
 # 取得対象の楽曲IDと難易度をあらかじめ登録しておくマスターテーブル
 class JubeatMusicMaster(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    music_id = db.Column(db.String(50), nullable=False) # 楽曲ID (mid)
-    seq_id = db.Column(db.Integer, nullable=False)      # 難易度 (0, 1, 2)
-    comment = db.Column(db.String(100))                 # 管理用の曲名メモなど
+    music_id = db.Column(db.String(50), nullable=False)                     # 楽曲ID (mid)
+    seq_id = db.Column(db.Integer, nullable=False)                          # 難易度 (0, 1, 2)
+    name = db.Column(db.String(100))                                        # 曲名
+    level = db.Column(db.Float)                                             # レベル
+    is_beyond_limits = db.Column(db.Integer, nullable=False, default=0)     # 第1回Beyond Limitsの対象曲かどうか(非対象曲:0, 対象曲:1)
+    comment = db.Column(db.String(100))                                     # コメント
 
 # ランキング結果保存用テーブル
 class JubeatRanking(db.Model):

@@ -36,6 +36,6 @@ with app.app_context():
     db.create_all()
      # テスト用初期データ（空の場合のみ追加）
     if not JubeatMusicMaster.query.first():
-        sample1 = JubeatMusicMaster(music_id="96209810", seq_id=2, comment="I")
+        sample1 = JubeatMusicMaster(music_id="96209810", seq_id=2, name="I", is_beyond_limits=1)
         db.session.add_all([sample1])
         db.session.commit()

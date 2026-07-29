@@ -31,91 +31,117 @@ def fetch_and_save_ranking(music_id, seq_id):
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
     req = urllib.request.Request(url, headers=headers)
+
+    # 💡 最大3回までリトライを試みるループ
+    MAX_RETRIES = 3
+    for attempt in range(MAX_RETRIES):
+        try:
+            # 2. ログイン不要なので、直接URLを開いてHTMLを読み込む
+            with urllib.request.urlopen(req) as response:
+                html = response.read().decode("utf-8")
+                soup = BeautifulSoup(html, "html.parser")
+
+                # 💡 チェック：本来あるべきテーブルの行（tr）がHTML内に存在するか確認
+                rows = soup.find_all('tr')
+                
+                # データの行数が極端に少ない（ヘッダーしかない、または空）場合は失敗とみなす
+                if len(rows) <= 1:
+                    # 一瞬URLテキストだけが出ている状態と判断し、次のループ（リトライ）へ
+                    print(f"[警告] データの取得に失敗した可能性があるためリトライします ({attempt + 1}/{MAX_RETRIES})")
+                    time.sleep(1.5) # 1.5秒待ってから再チャレンジ
+                    continue
+                
+                # 3. 曲名の取得 (h1タグや特定のタイトルクラスから抽出)
+                music_name = "不明な楽曲"
+                title_el = soup.find(['div'], class_=['bar_cd pg'])
+                # 1. タグ全体の文字列（または中のテキスト）を取得し、カンマで分割
+                # ※ HTML構造を保ったまま「>」と「<」を判定するため str(title_el) を使用します
+                raw_text = str(title_el)
+                comma_split_items = raw_text.split(",")
+                
+                for item in comma_split_items:
+                    # 2. 正則表現を使って「>」と「<」に挟まれた部分をすべて抽出
+                    # [^><]+ は「>」でも「<」でもない文字が1文字以上続く部分にマッチします
+                    matches = re.findall(r'>([^><]+)<', item)
+                    
+                    for match in matches:
+                        # 前後の余計な空白や改行を削除（トリミング）
+                        clean_text = match.strip()
+                            
+                        # 3. 空部分は無視する
+                        if clean_text:
+                            music_name = clean_text
+                
+                # 曲名でのマッチングではなく、一意である「music_id」を基準にマスターからレコードを探します
+                master_item = JubeatMusicMaster.query.filter_by(music_id=str(music_id), seq_id=int(seq_id)).first()
+                
+                if master_item and master_item.name:
+                    # マスターに登録されている綺麗な名前（例: "EBONY & IVORY"）を正として採用する
+                    official_music_name = master_item.name
+                else:
+                    # マスターにない場合はスクレイピングした名前をそのまま使用
+                    official_music_name = music_name
+
+                # 難易度ラベルの判定
+                diff_labels = {0: "BASIC", 1: "ADVANCED", 2: "EXTREME"}
+                diff_name = diff_labels.get(int(seq_id), "UNKNOWN")
+                save_title = f"{official_music_name} [{diff_name}]"
+
+                # 4. ランキングが掲載されているテーブルの行(tr)を解析
+                # コナミのランキング表構造に合わせてtdの並びをパース
+                rows = soup.find_all('tr')
+                ranking_list = []
+                
+                for row in rows:
+                    cells = row.find_all('td')
+                    # 通常「順位、プレイヤー名、スコア、日付」など4つのセルで構成される
+                    if len(cells) >= 4:
+                        name_text = cells[1].text.strip()
+                        score_text = cells[2].text.strip().replace(',', '')
+                        date_text = cells[3].text.strip()
+                        
+                        # ヘッダー行やノイズを除外し、数字データであるかバリデーション
+                        if score_text.isdigit() and len(ranking_list) < 20:
+                            ranking_list.append({
+                                'player_name': name_text,
+                                'score': int(score_text),
+                                'play_date': date_text
+                            })
+                
+                if not ranking_list:
+                    return False, "ランキングデータが見つかりませんでした。HTMLの構造が変更された可能性があります。"
+
+                # 5. 重複防止：同一曲名・難易度の古いランキングを一旦削除
+                for item in ranking_list:
+                    existing = JubeatRanking.query.filter_by(
+                        music_name=save_title, 
+                        player_name=item["player_name"], 
+                        score=item['score'], 
+                        play_date=item['play_date']
+                    ).first()
+                    if existing:
+                        db.session.delete(existing)
+                
+                # 6. 新しい上位20件をDBにコミット
+                for item in ranking_list:
+                    new_rank = JubeatRanking(
+                        music_name=save_title,
+                        player_name=item['player_name'],
+                        score=item['score'],
+                        play_date=item['play_date'],
+                        updated_at=jst_now_str
+                    )
+                    db.session.add(new_rank)
+                    
+                db.session.commit()
+                return True, f"「{save_title}」のランキング上位20件を自動取得しました！"
+                
+        except Exception as e:
+            print(f"通信エラーによるリトライ: {e}")
+            time.sleep(2.0)
     
-    try:
-        # 2. ログイン不要なので、直接URLを開いてHTMLを読み込む
-        with urllib.request.urlopen(req) as response:
-            html = response.read().decode("utf-8")
-            soup = BeautifulSoup(html, "html.parser")
-            
-            # 3. 曲名の取得 (h1タグや特定のタイトルクラスから抽出)
-            music_name = "不明な楽曲"
-            title_el = soup.find(['div'], class_=['bar_cd pg'])
-            # 1. タグ全体の文字列（または中のテキスト）を取得し、カンマで分割
-            # ※ HTML構造を保ったまま「>」と「<」を判定するため str(title_el) を使用します
-            raw_text = str(title_el)
-            comma_split_items = raw_text.split(",")
-            
-            for item in comma_split_items:
-              # 2. 正則表現を使って「>」と「<」に挟まれた部分をすべて抽出
-              # [^><]+ は「>」でも「<」でもない文字が1文字以上続く部分にマッチします
-              matches = re.findall(r'>([^><]+)<', item)
-                
-              for match in matches:
-                # 前後の余計な空白や改行を削除（トリミング）
-                clean_text = match.strip()
-                    
-                # 3. 空部分は無視する
-                if clean_text:
-                  music_name = clean_text
-
-            # 難易度ラベルの判定
-            diff_labels = {0: "BASIC", 1: "ADVANCED", 2: "EXTREME"}
-            diff_name = diff_labels.get(int(seq_id), "UNKNOWN")
-            save_title = f"{music_name} [{diff_name}]"
-
-            # 4. ランキングが掲載されているテーブルの行(tr)を解析
-            # コナミのランキング表構造に合わせてtdの並びをパース
-            rows = soup.find_all('tr')
-            ranking_list = []
-            
-            for row in rows:
-                cells = row.find_all('td')
-                # 通常「順位、プレイヤー名、スコア、日付」など4つのセルで構成される
-                if len(cells) >= 4:
-                    name_text = cells[1].text.strip()
-                    score_text = cells[2].text.strip().replace(',', '')
-                    date_text = cells[3].text.strip()
-                    
-                    # ヘッダー行やノイズを除外し、数字データであるかバリデーション
-                    if score_text.isdigit() and len(ranking_list) < 20:
-                        ranking_list.append({
-                            'player_name': name_text,
-                            'score': int(score_text),
-                            'play_date': date_text
-                        })
-            
-            if not ranking_list:
-                return False, "ランキングデータが見つかりませんでした。HTMLの構造が変更された可能性があります。"
-
-            # 5. 重複防止：同一曲名・難易度の古いランキングを一旦削除
-            for item in ranking_list:
-                existing = JubeatRanking.query.filter_by(
-                    music_name=save_title, 
-                    player_name=item["player_name"], 
-                    score=item['score'], 
-                    play_date=item['play_date']
-                ).first()
-                if existing:
-                    db.session.delete(existing)
-            
-            # 6. 新しい上位20件をDBにコミット
-            for item in ranking_list:
-                new_rank = JubeatRanking(
-                    music_name=save_title,
-                    player_name=item['player_name'],
-                    score=item['score'],
-                    play_date=item['play_date'],
-                    updated_at=jst_now_str
-                )
-                db.session.add(new_rank)
-                
-            db.session.commit()
-            return True, f"「{save_title}」のランキング上位20件を自動取得しました！"
-            
-    except Exception as e:
-        db.session.rollback()
-        return False, f"通信または解析エラーが発生しました: {str(e)}"
+    db.session.rollback()
+    return False, f"通信または解析エラーが発生しました: {str(e)}"
 
 # 自作サイトのボタンから直接コナミのサイトを叩いてスクレイピングする関数(ハードモード用)
 def fetch_and_save_ranking_hard(music_id, seq_id):
@@ -163,10 +189,20 @@ def fetch_and_save_ranking_hard(music_id, seq_id):
                         if clean_text:
                             music_name = clean_text
 
+                # 曲名でのマッチングではなく、一意である「music_id」を基準にマスターからレコードを探します
+                master_item = JubeatMusicMaster.query.filter_by(music_id=str(music_id), seq_id=int(seq_id)).first()
+                
+                if master_item and master_item.name:
+                    # マスターに登録されている綺麗な名前（例: "EBONY & IVORY"）を正として採用する
+                    official_music_name = master_item.name
+                else:
+                    # マスターにない場合はスクレイピングした名前をそのまま使用
+                    official_music_name = music_name
+
                 # 難易度ラベルの判定
                 diff_labels = {0: "BASIC", 1: "ADVANCED", 2: "EXTREME"}
                 diff_name = diff_labels.get(int(seq_id), "UNKNOWN")
-                save_title = f"{music_name} [{diff_name}]"
+                save_title = f"{official_music_name} [{diff_name}]"
 
                 # 4. ランキングが掲載されているテーブルの行(tr)を解析
                 # コナミのランキング表構造に合わせてtdの並びをパース
@@ -285,18 +321,59 @@ def ranking_scraping(mode):
     search_music = request.args.get('search_music', '').strip()
     search_date = request.args.get('search_date', '').strip()  # 'YYYY-MM-DDTHH:MM'
     sort_by = request.args.get('sort_by', 'play_date').strip()
+    tournament_filter = request.args.get('tournament_filter', '').strip()
+
+    # 💡 2. プルダウンの選択状態に応じて、楽曲マスターの抽出クエリを動的に切り替える
+    master_query = JubeatMusicMaster.query
+    if tournament_filter == '1':
+        # 「is_beyond_limitsが1の譜面のみ」が選択されている場合
+        master_query = master_query.filter_by(is_beyond_limits=1)
 
     # まず楽曲マスターから「idの昇順（登録順）」で全楽曲を取得する
     # これにより、画面に表示される楽曲の絶対的な並び順（土台）が固定されます
-    music_masters = JubeatMusicMaster.query.order_by(JubeatMusicMaster.id.asc()).all()
+    music_masters = master_query.order_by(JubeatMusicMaster.id.asc()).all()
+
+    diff_labels = {0: "BASIC", 1: "ADVANCED", 2: "EXTREME"}
     if mode == 'hard':
-        query = JubeatRankingHard.query
+        # ベースとなる結合クエリを作成
+        # ランキングの曲名（music_name）と、マスターの情報を文字結合した仮想の曲名が一致する条件でJOIN
+        query = db.session.query(JubeatRankingHard)
+        
+        # 💡 3. プルダウンの選択（beyond_filter == '1'）に応じて、ランキングデータ側にもクエリ段階で制限をかける
+        if tournament_filter == '1':
+            # マスター側で is_beyond_limits が 1 のデータに関連するランキングだけを抽出
+            # ※ SQLiteやPostgreSQLのどちらでも動くように、一度対象となる「正しい曲名リスト」をPython側で作成して filter(in_()) で処理するのが最も安全で高速です
+            target_titles = []
+            for m in JubeatMusicMaster.query.filter_by(is_beyond_limits=1).all():
+                target_titles.append(f"{m.name} [{diff_labels.get(m.seq_id, 'UNKNOWN')}]")
+            
+            # 抽出対象の曲名リストに含まれるランキングレコードのみに絞り込む
+            query = query.filter(JubeatRankingHard.music_name.in_(target_titles))
+        else:
+            query = JubeatRankingHard.query
+
         if search_player:
             query = query.filter(JubeatRankingHard.player_name.like(f"%{search_player}%"))
         if search_music:
             query = query.filter(JubeatRankingHard.music_name.like(f"%{search_music}%"))
     else:
-        query = JubeatRanking.query
+        # ベースとなる結合クエリを作成
+        # ランキングの曲名（music_name）と、マスターの情報を文字結合した仮想の曲名が一致する条件でJOIN
+        query = db.session.query(JubeatRanking)
+        
+        # 💡 3. プルダウンの選択（beyond_filter == '1'）に応じて、ランキングデータ側にもクエリ段階で制限をかける
+        if tournament_filter == '1':
+            # マスター側で is_beyond_limits が 1 のデータに関連するランキングだけを抽出
+            # ※ SQLiteやPostgreSQLのどちらでも動くように、一度対象となる「正しい曲名リスト」をPython側で作成して filter(in_()) で処理するのが最も安全で高速です
+            target_titles = []
+            for m in JubeatMusicMaster.query.filter_by(is_beyond_limits=1).all():
+                target_titles.append(f"{m.name} [{diff_labels.get(m.seq_id, 'UNKNOWN')}]")
+            
+            # 抽出対象の曲名リストに含まれるランキングレコードのみに絞り込む
+            query = query.filter(JubeatRanking.music_name.in_(target_titles))
+        else:
+            query = JubeatRanking.query
+
         if search_player:
             query = query.filter(JubeatRanking.player_name.like(f"%{search_player}%"))
         if search_music:
@@ -372,8 +449,7 @@ def ranking_scraping(mode):
         for m in music_masters:
             # スクレイピング時に保存される曲名フォーマット（例: "曲名 [EXTREME]"）を再現
             # fetch_and_save_ranking 内の save_title の命名規則と一致させます
-            # もし comment カラムに正式な曲名が入っていない場合は、後述の補足コードを参照してください
-            save_title = f"{m.comment} [{diff_labels.get(m.seq_id, 'UNKNOWN')}]"
+            save_title = f"{m.name} [{diff_labels.get(m.seq_id, 'UNKNOWN')}]"
             
             # マスターに登録されている順番で空のリストを初期化（器を作る）
             grouped_data[save_title] = []
@@ -433,7 +509,7 @@ def ranking_scraping(mode):
     # 💡 1. マスターに登録されている「すべての譜面名」のリストを作成
     all_master_titles = []
     for m in music_masters:
-        title = f"{m.comment} [{diff_labels.get(m.seq_id, 'UNKNOWN')}]"
+        title = f"{m.name} [{diff_labels.get(m.seq_id, 'UNKNOWN')}]"
         all_master_titles.append(title)
 
     # 💡 2. 絞り込みの結果、データが存在している（表示対象の）譜面名を取得
@@ -472,6 +548,7 @@ def ranking_scraping(mode):
         search_date=search_date,
         update_date=update_date,
         sort_by=sort_by,
+        tournament_filter=tournament_filter,
         current_mode=mode, # 💡 現在のモード（'normal' または 'hard'）をHTMLに渡す
         hidden_music_list=hidden_music_list,
         status=SCRAPING_STATUS
@@ -527,7 +604,7 @@ def trigger_scraping_normal():
         return "OK", 200
     
     # 30秒を待たずに、一瞬でユーザー画面をリフレッシュする
-    flash("楽曲ランキングの一括更新をバックグラウンドで開始しました。完了まで約2分かかります。ページを再読み込みして進捗を確認してください。")
+    flash("楽曲ランキングの一括更新をバックグラウンドで開始しました。完了まで約10分かかります。ページを再読み込みして進捗を確認してください。")
     return redirect(url_for('ranking_scraping.ranking_scraping', mode='normal'))
 
 
@@ -581,5 +658,5 @@ def trigger_scraping_hard():
         return "OK", 200
     
     # 30秒を待たずに、一瞬でユーザー画面をリフレッシュする
-    flash("楽曲ランキングの一括更新をバックグラウンドで開始しました。完了まで約20分かかります。ページを再読み込みして進捗を確認してください。")
+    flash("楽曲ランキングの一括更新をバックグラウンドで開始しました。完了まで約60分かかります。ページを再読み込みして進捗を確認してください。")
     return redirect(url_for('ranking_scraping.ranking_scraping', mode='hard'))
