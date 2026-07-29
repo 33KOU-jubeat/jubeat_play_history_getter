@@ -60,19 +60,17 @@ def admin_page():
                 bl = int(row['is_beyond_limits'])
                 comm = str(row['comment']).strip()
                 
-                # すでに全く同じmusic_idとseq_idの組み合わせが登録されているかチェック
-                exists = JubeatMusicMaster.query.filter_by(music_id=mid, seq_id=seq).first()
-                if not exists:
-                    # 407件分のデータをメモリ上のリストにすべて格納
-                    insert_data_list.append({
-                        "music_id": mid,
-                        "seq_id": seq,
-                        "name": name,
-                        "level": lvl,
-                        "is_beyond_limits": bl,
-                        "comm": comm
-                    })
-                    success_count += 1
+
+                # 407件分のデータをメモリ上のリストにすべて格納
+                insert_data_list.append({
+                    "music_id": mid,
+                    "seq_id": seq,
+                    "name": name,
+                    "level": lvl,
+                    "is_beyond_limits": bl,
+                    "comm": comm
+                })
+                success_count += 1
             
             # 💡 【核心】現在のFlaskアプリのコンテキストを取得
             app_context = current_app._get_current_object().app_context()
