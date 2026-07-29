@@ -1,13 +1,30 @@
 # -*- coding: utf-8 -*-
 import io
+import threading  # 💡 非同期処理のためにインポート
 import pandas as pd
 
-from flask import Blueprint, render_template, request, session, redirect, url_for, flash
+from flask import Blueprint, render_template, request, session, redirect, url_for, flash, current_app
 
 from app.database import db, JubeatMusicMaster
 
 # adminという名前のBlueprintを作成
 admin_bp = Blueprint('admin', __name__)
+
+# 💡 データベースへの書き込みを裏で実行する関数
+def async_import_task(app_context, insert_data_list):
+    # Flaskのコンテキストを別スレッドに引き継ぐ
+    with app_context:
+        try:
+            chunk_size = 100
+            for i in range(0, len(insert_data_list), chunk_size):
+                chunk = insert_data_list[i:i + chunk_size]
+                db.session.bulk_insert_mappings(JubeatMusicMaster, chunk)
+                db.session.commit()  # チャンクごとに即座に確定させて通信を終わらせる
+            print(f"[SUCCESS] バックグラウンドでの楽曲登録が完了しました（{len(insert_data_list)}件）")
+        except Exception as e:
+            db.session.rollback()
+            print(f"[ERROR] バックグラウンドインポート失敗: {str(e)}")
+
 
 # --- 追加：管理用ページ（CSVアップロードと現在の登録曲一覧） ---
 @admin_bp.route('/admin', methods=['GET', 'POST'])
@@ -57,12 +74,13 @@ def admin_page():
                     })
                     success_count += 1
             
-            chunk_size = 100
-            for i in range(0, len(insert_data_list), chunk_size):
-                chunk = insert_data_list[i:i + chunk_size]
-                db.session.bulk_insert_mappings(JubeatMusicMaster, chunk)
-                db.session.commit()  # チャンクごとに即座に確定させて通信を終わらせる
-            flash(f"CSVから新たに {success_count} 件の楽曲をマスターに登録しました！", "success")
+            # 💡 【核心】現在のFlaskアプリのコンテキストを取得
+            app_context = current_app._get_current_object().app_context()
+
+            # 別スレッドを立ち上げて、データベース処理を裏で走らせる
+            thread = threading.Thread(target=async_import_task, args=(app_context, insert_data_list))
+            thread.start()
+            flash(f"CSVから新たに {success_count} 件の楽曲を登録します。", "success")
             
         except Exception as e:
             db.session.rollback()
