@@ -141,7 +141,7 @@ def fetch_and_save_ranking(music_id, seq_id):
             time.sleep(2.0)
     
     db.session.rollback()
-    return False, f"通信または解析エラーが発生しました: {str(e)}"
+    return False, f"通信または解析エラーが発生しました。"
 
 # 自作サイトのボタンから直接コナミのサイトを叩いてスクレイピングする関数(ハードモード用)
 def fetch_and_save_ranking_hard(music_id, seq_id):
