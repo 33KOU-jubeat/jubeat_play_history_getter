@@ -124,14 +124,16 @@ def fetch_and_save_ranking(music_id, seq_id):
                 
                 # 6. 新しい上位20件をDBにコミット
                 for item in ranking_list:
-                    new_rank = JubeatRanking(
-                        music_name=save_title,
-                        player_name=item['player_name'],
-                        score=item['score'],
-                        play_date=item['play_date'],
-                        updated_at=jst_now_str
-                    )
-                    db.session.add(new_rank)
+                    # 通常判定はエクセのみ取得する
+                    if item['score'] == 1000000:
+                        new_rank = JubeatRanking(
+                            music_name=save_title,
+                            player_name=item['player_name'],
+                            score=item['score'],
+                            play_date=item['play_date'],
+                            updated_at=jst_now_str
+                        )
+                        db.session.add(new_rank)
                     
                 db.session.commit()
                 return True, f"「{save_title}」のランキング上位20件を自動取得しました！"
@@ -604,7 +606,7 @@ def trigger_scraping_normal():
         return "OK", 200
     
     # 30秒を待たずに、一瞬でユーザー画面をリフレッシュする
-    flash("楽曲ランキングの一括更新をバックグラウンドで開始しました。完了まで約10分かかります。ページを再読み込みして進捗を確認してください。")
+    flash("楽曲ランキングの一括更新をバックグラウンドで開始しました。完了まで約40分かかります。ページを再読み込みして進捗を確認してください。")
     return redirect(url_for('ranking_scraping.ranking_scraping', mode='normal'))
 
 
@@ -658,5 +660,5 @@ def trigger_scraping_hard():
         return "OK", 200
     
     # 30秒を待たずに、一瞬でユーザー画面をリフレッシュする
-    flash("楽曲ランキングの一括更新をバックグラウンドで開始しました。完了まで約60分かかります。ページを再読み込みして進捗を確認してください。")
+    flash("楽曲ランキングの一括更新をバックグラウンドで開始しました。完了まで約170分かかります。ページを再読み込みして進捗を確認してください。")
     return redirect(url_for('ranking_scraping.ranking_scraping', mode='hard'))

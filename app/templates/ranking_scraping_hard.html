@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>jubeat 大会対策用ランキング一括表示(仮)</title>
+    <title>jubeat 大会対策用ランキング一括表示</title>
     <style>
         body { font-family: sans-serif; margin: 40px; background-color: #f8f9fa; }
         .container { max-width: 900px; margin: 0 auto; }
@@ -19,7 +19,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>jubeat 大会対策用ランキング一括表示(仮)</h1>
+        <h1>jubeat 大会対策用ランキング一括表示</h1>
         <div style="display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #cbd5e0; padding-bottom: 0;">
             <!-- 🟢 通常モード用タブ -->
             <a href="/ranking_scraping/normal?search_player={{ search_player | urlencode }}&search_music={{ search_music | urlencode }}&search_date={{ search_date }}&sort_by={{ sort_by }}&tournament_filter={{ tournament_filter }}" 
@@ -36,12 +36,13 @@
             </a>
         </div>
         <p>※現在の更新対象:2026/7/27時点のレベル10すべて(407譜面)</p>
+        <p>※現在の自動更新設定:1日1回(7:05開始)</p>
         <!-- 一括更新トリガーボタンのエリア -->
         <div style="margin-bottom: 30px;">
             <form action="/trigger_scraping_hard" method="post">
                 <!-- 💡 実行中はボタンを押せない（無効化）ようにする -->
                 <button type="submit" class="btn" {% if status.is_running %}disabled style="background-color: #6c757d; cursor: not-allowed;"{% endif %}>
-                    {% if status.is_running %}🔄 現在裏で自動巡回中...{% else %}🔄 ハードモード用データベースの全楽曲ランキングを一括更新(約60分かかります){% endif %}
+                    {% if status.is_running %}🔄 現在裏で自動巡回中...{% else %}🔄 ハードモード用データベースの全楽曲ランキングを手動更新(約170分かかります){% endif %}
                 </button>
             </form>
             <p style="color: #28a745; font-weight: bold; margin-top: 10px;">※ 最終更新日時:{{ update_date }}</p>
